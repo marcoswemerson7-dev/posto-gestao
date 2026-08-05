@@ -1,68 +1,69 @@
 :root{
   --cerrados-blue:#063b7a;
   --cerrados-blue-2:#0b4f9c;
+  --cerrados-blue-3:#113da1;
   --cerrados-red:#ed1c24;
   --cerrados-red-2:#cf171d;
-  --cerrados-red-dark:#a91116;
-  --cerrados-ink:#0f172a;
+  --cerrados-ink:#10264d;
+  --cerrados-muted:#71809a;
 }
 
 /* =========================
-   LOGIN - IDENTIDADE DO POSTO
+   LOGIN - MODELO POSTO DOS CERRADOS
    ========================= */
 .login-shell{
   min-height:100vh;
   display:grid;
-  grid-template-columns:58% 42%;
-  background:#fff;
+  grid-template-columns:56% 44%;
+  background:#f4f7fb;
 }
 
-/* Lado da logomarca: branco, limpo e com textos em azul */
+/* LADO ESQUERDO - fundo enviado pelo usuário */
 .login-brand-panel{
   position:relative;
   overflow:hidden;
-  background:linear-gradient(145deg,#ffffff 0%,#f7f9fc 100%);
-  color:var(--cerrados-blue);
+  display:flex;
   flex-direction:column;
   align-items:flex-start;
   justify-content:center;
-  gap:12px;
-  padding:64px 68px;
-  border-right:1px solid rgba(6,59,122,.08);
+  padding:58px 72px;
+  color:#fff;
+  background-image:url('/login-bg.png');
+  background-size:cover;
+  background-position:center center;
+  background-repeat:no-repeat;
 }
 
+/* escurecimento suave só para garantir leitura, sem esconder o fundo */
 .login-brand-panel::after{
   content:"";
   position:absolute;
-  width:420px;
-  height:420px;
-  border-radius:50%;
-  right:-180px;
-  top:-170px;
-  background:rgba(6,59,122,.035);
+  inset:0;
+  background:linear-gradient(90deg,rgba(2,27,86,.08),rgba(2,27,86,.02));
+  pointer-events:none;
 }
 
-/* esconde o ícone antigo, caso ainda exista no JSX */
+/* esconde ícone antigo do JSX */
 .login-brand-panel .brand-mark,
 .login-card .brand-mark{
   display:none!important;
 }
 
-/* Logo real em boa evidência */
+/* nova logomarca PNG */
 .login-brand-panel::before{
   content:"";
+  position:relative;
+  z-index:2;
   display:block;
-  width:440px;
-  height:190px;
-  max-width:84%;
-  background-image:url('/logo-posto.webp');
+  width:470px;
+  height:260px;
+  max-width:88%;
+  background-image:url('/logo-posto.png');
   background-repeat:no-repeat;
   background-position:left center;
   background-size:contain;
   margin:0 0 16px 0;
-  filter:drop-shadow(0 12px 24px rgba(6,59,122,.10));
-  position:relative;
-  z-index:2;
+  filter:drop-shadow(0 14px 28px rgba(0,0,0,.18));
 }
 
 .login-brand-panel > div:not(.brand-mark){
@@ -72,47 +73,106 @@
 }
 
 .login-brand-panel .eyebrow.light{
-  color:var(--cerrados-red)!important;
+  color:#fff!important;
   font-size:13px;
   font-weight:800;
-  letter-spacing:.16em;
+  letter-spacing:.17em;
+  margin-bottom:11px;
 }
 
+/* troca visualmente “Posto Gestão” sem mexer no App.tsx */
 .login-brand-panel h1{
-  color:var(--cerrados-blue);
-  margin:8px 0 12px;
+  margin:0;
   line-height:1.04;
+  color:#fff;
+  font-size:0!important;
   font-weight:800;
   letter-spacing:-1px;
 }
-
-.login-brand-panel p{
-  color:#2b4f73;
-  margin:0;
-  max-width:620px;
+.login-brand-panel h1::after{
+  content:"Posto dos Cerrados";
+  display:block;
+  color:#fff;
+  font-size:clamp(42px,4vw,66px);
+  line-height:1.04;
+  font-weight:800;
 }
 
-/* Lado do login: vermelho da logomarca */
+.login-brand-panel h1::before{
+  content:"";
+  display:none;
+}
+
+.login-brand-panel p{
+  margin:0;
+  max-width:620px;
+  color:rgba(255,255,255,.95);
+  font-size:19px;
+  line-height:1.68;
+}
+
+.login-brand-panel p::before{
+  content:"";
+  display:block;
+  width:72px;
+  height:4px;
+  border-radius:999px;
+  background:var(--cerrados-red);
+  margin:20px 0 22px;
+}
+
+/* =========================
+   LADO DIREITO - CARD DE LOGIN
+   ========================= */
 .login-card-wrap{
+  position:relative;
+  overflow:hidden;
   min-height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
-  padding:42px;
-  background:linear-gradient(145deg,#f3242b 0%,#dc1a21 48%,#b81117 100%);
+  padding:42px 48px;
+  background:linear-gradient(145deg,#f7f9fc 0%,#eef2f7 100%);
+}
+
+.login-card-wrap::before{
+  content:"";
+  position:absolute;
+  width:520px;
+  height:520px;
+  border-radius:90px;
+  right:-220px;
+  top:-180px;
+  border:1px solid rgba(255,255,255,.9);
+  background:rgba(255,255,255,.20);
+  transform:rotate(12deg);
+}
+
+.login-card-wrap::after{
+  content:"";
+  position:absolute;
+  width:430px;
+  height:430px;
+  border-radius:70px;
+  right:-110px;
+  bottom:-210px;
+  border:1px solid rgba(255,255,255,.95);
+  background:rgba(255,255,255,.14);
 }
 
 .login-card{
+  position:relative;
+  z-index:2;
   width:100%;
-  max-width:450px;
-  background:rgba(255,255,255,.985);
-  border-radius:28px;
-  padding:38px 34px 32px;
-  border:1px solid rgba(255,255,255,.28);
-  box-shadow:0 28px 70px rgba(80,0,4,.24);
+  max-width:500px;
+  background:rgba(255,255,255,.975);
+  border-radius:30px;
+  padding:38px 38px 34px;
+  border:1px solid rgba(255,255,255,.90);
+  box-shadow:0 28px 72px rgba(24,49,97,.14);
 }
 
-/* Remove logo do cartão de login e centraliza acesso */
+/* badge superior “Acesso ao sistema” */
 .brand-inline{
   display:flex!important;
   flex-direction:column;
@@ -121,107 +181,179 @@
   text-align:center;
   gap:0!important;
   min-height:auto;
-  margin:0 0 30px;
+  margin:0 0 32px;
 }
-
-.brand-inline::before{
-  content:"";
-  display:block;
-  width:42px;
-  height:4px;
-  border-radius:999px;
-  background:var(--cerrados-red);
-  margin-bottom:14px;
-}
-
 .brand-inline strong{
   display:none!important;
 }
-
 .brand-inline small{
   display:inline-flex!important;
   align-items:center;
   justify-content:center;
   margin:0!important;
-  padding:8px 16px;
+  padding:9px 18px;
   border-radius:999px;
-  background:#fff0f1;
-  color:var(--cerrados-red-2)!important;
+  background:#edf3ff;
+  color:var(--cerrados-blue-3)!important;
   font-size:13px;
-  font-weight:700;
+  font-weight:800;
   line-height:1.2;
 }
-
-.brand-inline::after{
-  content:none;
+.brand-inline small::before{
+  content:"🔒";
+  margin-right:8px;
+  font-size:13px;
 }
 
 .login-title{
-  margin-top:0;
+  margin:0 0 26px;
 }
-
 .login-title h2{
-  color:#751016;
+  margin:0 0 8px;
+  color:var(--cerrados-ink);
+  font-size:46px;
+  line-height:1;
+  font-weight:800;
+  letter-spacing:-.8px;
 }
-
 .login-title p{
-  color:#74839a;
+  margin:0;
+  color:var(--cerrados-muted);
+  font-size:15px;
+  line-height:1.55;
 }
 
 .login-card > label{
-  color:#721218;
+  display:block;
+  margin-bottom:18px;
+  color:var(--cerrados-ink);
+  font-size:14px;
+  font-weight:800;
 }
 
+.input-wrap{
+  min-height:54px;
+  margin-top:8px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  overflow:hidden;
+  background:#fff;
+  border:1px solid #d6e0f0;
+  border-radius:15px;
+  transition:border-color .2s ease,box-shadow .2s ease;
+}
+.input-wrap svg:first-child{
+  margin-left:15px;
+  color:var(--cerrados-blue-3);
+}
+.input-wrap input{
+  flex:1;
+  height:54px;
+  border:0;
+  outline:0;
+  padding:0 10px 0 0;
+  background:transparent;
+  color:#20365d;
+  font-size:15px;
+  font-weight:600;
+}
 .input-wrap:focus-within,
 input:focus,
 select:focus{
-  border-color:var(--cerrados-red)!important;
-  box-shadow:0 0 0 3px rgba(237,28,36,.10)!important;
+  border-color:#8caef0!important;
+  box-shadow:0 0 0 4px rgba(17,61,161,.08)!important;
 }
 
-.text-button{
-  color:var(--cerrados-red-2)!important;
+.icon-button{
+  width:44px;
+  height:44px;
+  margin-right:7px;
+  border:0;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:transparent;
+  color:#8493ac;
+  cursor:pointer;
 }
+.icon-button:hover{background:#f3f6fb;color:var(--cerrados-blue-3)}
+
+.login-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 0 22px;
+}
+.checkbox-label{
+  display:flex!important;
+  align-items:center;
+  gap:9px;
+  margin:0!important;
+  color:#667790!important;
+  font-size:13px!important;
+  font-weight:500!important;
+}
+.checkbox-label input{accent-color:var(--cerrados-blue-3)}
+.text-button{
+  border:0;
+  background:transparent;
+  color:var(--cerrados-blue-3)!important;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+}
+.text-button:hover{text-decoration:underline}
 
 .login-card .primary-button{
-  background:linear-gradient(135deg,#ed1c24 0%,#c9161d 100%);
+  width:100%;
+  min-height:56px;
+  border:0;
+  border-radius:16px;
+  background:linear-gradient(135deg,#145fd9 0%,#0c46ae 100%);
   color:#fff;
-  box-shadow:0 10px 22px rgba(201,22,29,.20);
+  font-size:16px;
+  font-weight:800;
+  box-shadow:0 12px 25px rgba(12,70,174,.20);
 }
-
 .login-card .primary-button:hover{
-  background:linear-gradient(135deg,#ff3037 0%,#b81117 100%);
+  background:linear-gradient(135deg,#1a69ea 0%,#093d9c 100%);
+  transform:translateY(-1px);
 }
 
-.login-card .checkbox-label input{
-  accent-color:var(--cerrados-red);
+.error-box{
+  margin-bottom:15px;
+  padding:12px 14px;
+  border-radius:12px;
+  background:#fff3f4;
+  border:1px solid #ffd5d8;
+  color:#bc2631;
+  font-size:13px;
 }
 
 .demo-note{
-  background:#fff4f5;
-  color:#87565d;
-  border-color:#ffe0e2;
+  margin-top:19px;
+  padding:16px 18px;
+  border-radius:17px;
+  background:#f5f8fd;
+  border:1px solid #e6edf8;
+  color:#677992;
 }
-
 .demo-note strong{
-  color:var(--cerrados-red-2);
-}
-
-/* Compatibilidade com LoginPage.tsx caso seja reutilizado */
-.brand-logo{
   display:block;
-  object-fit:contain;
+  margin-bottom:4px;
+  color:var(--cerrados-ink);
+  font-size:13px;
+  font-weight:800;
 }
+.demo-note span{font-size:13px}
 
-.login-logo-large{
-  width:440px;
-  max-width:84%;
-  height:auto;
-}
-
-.login-logo-small{
-  display:none!important;
-}
+/* compatibilidade com LoginPage.tsx */
+.brand-logo{display:block;object-fit:contain}
+.login-logo-large{width:470px;max-width:88%;height:auto}
+.login-logo-small{display:none!important}
 
 /* =========================
    SISTEMA INTERNO
@@ -232,88 +364,52 @@ select:focus{
   max-height:76px;
   object-fit:contain;
 }
-
-.brand-mark{
-  background:var(--cerrados-red);
-}
-
-.sidebar{
-  background:linear-gradient(180deg,#07294e 0%,#061d38 100%);
-}
-
-.sidebar-brand{
-  min-height:96px;
-}
-
+.brand-mark{background:var(--cerrados-blue-2)}
+.sidebar{background:linear-gradient(180deg,#07294e 0%,#061d38 100%)}
+.sidebar-brand{min-height:96px}
 .nav-item.active{
   box-shadow:inset 3px 0 var(--cerrados-red);
   background:rgba(255,255,255,.10);
 }
-
-.primary-button{
-  background:var(--cerrados-red);
-}
-
-.primary-button:hover{
-  background:var(--cerrados-red-2);
-}
-
-.text-button,
-.negative,
-.text-danger,
-.logout{
-  color:var(--cerrados-red)!important;
-}
-
-.eyebrow{
-  color:var(--cerrados-red);
-}
-
-.progress div{
-  background:linear-gradient(90deg,var(--cerrados-red),#ff4c53);
-}
-
-.pill.green{
-  background:#fff0f1;
-  color:var(--cerrados-red-2);
-}
-
-.stat-icon.green,
-.quick-icon{
-  background:#fff0f1;
-  color:var(--cerrados-red-2);
-}
-
-.positive{
-  color:var(--cerrados-blue-2)!important;
-}
+.primary-button{background:var(--cerrados-blue-2)}
+.primary-button:hover{background:var(--cerrados-blue)}
+.eyebrow{color:var(--cerrados-red)}
+.progress div{background:linear-gradient(90deg,var(--cerrados-blue-2),#1b70cb)}
+.pill.green{background:#eaf3ff;color:var(--cerrados-blue)}
+.stat-icon.green,.quick-icon{background:#eaf3ff;color:var(--cerrados-blue-2)}
+.positive{color:var(--cerrados-blue-2)!important}
+.negative,.text-danger,.logout{color:var(--cerrados-red)!important}
 
 @media(max-width:1050px){
   .login-shell{grid-template-columns:52% 48%}
-  .login-brand-panel{padding:54px 44px}
-  .login-brand-panel::before{width:360px;height:160px;max-width:90%}
-  .login-logo-large{width:360px;max-width:90%}
+  .login-brand-panel{padding:50px 44px}
+  .login-brand-panel::before{width:390px;height:220px;max-width:92%}
+  .login-card-wrap{padding:30px}
+  .login-card{padding:34px 30px}
+  .login-title h2{font-size:40px}
 }
 
 @media(max-width:850px){
   .login-shell{display:block}
   .login-brand-panel{
-    min-height:390px;
+    min-height:520px;
     padding:42px 28px;
     text-align:center;
     align-items:center;
+    background-position:left center;
   }
   .login-brand-panel::before{
-    width:300px;
-    height:135px;
-    max-width:90%;
+    width:330px;
+    height:190px;
+    max-width:92%;
     background-position:center;
     margin-left:auto;
     margin-right:auto;
   }
-  .login-brand-panel h1,
+  .login-brand-panel h1::after,
   .login-brand-panel p,
   .login-brand-panel .eyebrow.light{text-align:center}
-  .login-card-wrap{min-height:auto;padding:24px 18px 42px}
-  .login-card{max-width:500px;padding:32px 24px}
+  .login-brand-panel p::before{margin-left:auto;margin-right:auto}
+  .login-card-wrap{min-height:auto;padding:26px 18px 42px}
+  .login-card{max-width:520px;padding:30px 24px}
 }
