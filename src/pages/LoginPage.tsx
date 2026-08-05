@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Fuel, Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react';
+import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react';
 
 type Props = {
   onLogin: () => void;
@@ -18,10 +18,10 @@ export default function LoginPage({ onLogin }: Props) {
   return (
     <div className="login-shell">
       <section className="login-brand-panel">
-        <div className="brand-mark large"><Fuel size={34} /></div>
+        <img className="brand-logo login-logo-large" src="/logo-posto.webp" alt="Posto dos Cerrados" />
         <div>
           <span className="eyebrow light">GESTÃO INTELIGENTE</span>
-          <h1>Posto Gestão</h1>
+          <h1>Posto dos Cerrados</h1>
           <p>Controle de caixa, clientes, fiado e combustível em um único lugar.</p>
         </div>
       </section>
@@ -29,9 +29,9 @@ export default function LoginPage({ onLogin }: Props) {
       <section className="login-card-wrap">
         <form className="login-card" onSubmit={submit}>
           <div className="brand-inline">
-            <div className="brand-mark"><Fuel size={24} /></div>
+            <img className="brand-logo login-logo-small" src="/logo-posto.webp" alt="Posto dos Cerrados" />
             <div>
-              <strong>Posto Gestão</strong>
+              <strong>Posto dos Cerrados</strong>
               <small>Acesso ao sistema</small>
             </div>
           </div>
