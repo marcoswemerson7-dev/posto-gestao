@@ -7,91 +7,151 @@
 }
 
 .login-brand-panel{
-  background:linear-gradient(135deg,var(--cerrados-blue) 0%,#0a4f8f 58%,var(--cerrados-red) 160%);
+  background:linear-gradient(135deg,var(--cerrados-blue) 0%,#0a4f8f 62%,#5c3b66 100%);
   flex-direction:column;
   align-items:flex-start;
   justify-content:center;
   gap:18px;
-  padding-left:clamp(56px,8vw,130px);
 }
 
-.brand-mark{background:var(--cerrados-blue-2)}
+.brand-mark{
+  background:var(--cerrados-blue-2);
+}
 
 .brand-logo{
   display:block;
-  object-fit:cover;
-  object-position:center 16%;
+  object-fit:contain;
+  flex:0 0 auto;
 }
 
-/* A imagem original possui bastante área transparente abaixo da marca.
-   Essas dimensões recortam visualmente essa sobra sem deformar a logo. */
+/* Logo principal do login: separada do texto, sem sobreposição */
 .login-logo-large{
-  width:320px;
-  height:164px;
-  max-width:82%;
-  filter:drop-shadow(0 14px 28px rgba(0,0,0,.18));
+  width:235px;
+  height:auto;
+  max-height:none;
+  margin:0 0 4px 0;
+  filter:drop-shadow(0 10px 22px rgba(0,0,0,.18));
 }
 
-.login-brand-panel>div:last-child{
-  max-width:610px;
+.login-brand-panel > div:not(.brand-mark){
+  width:100%;
 }
 
 .login-brand-panel h1{
-  font-size:52px;
+  margin:12px 0 10px;
   line-height:1.05;
-  margin:8px 0 14px;
 }
 
 .login-brand-panel p{
   margin:0;
-  max-width:590px;
+}
+
+/* Cabeçalho do cartão: logo compacta, texto ao lado */
+.brand-inline{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:64px;
 }
 
 .login-logo-small{
   width:112px;
-  height:58px;
-  flex:0 0 112px;
+  height:auto;
+  max-height:58px;
 }
 
-.brand-inline{
-  align-items:center;
-  min-height:62px;
+.brand-inline > div:last-child{
+  min-width:0;
 }
 
-.brand-inline>div:last-child{
-  margin-left:4px;
+.brand-inline strong{
+  display:block;
+  line-height:1.15;
+}
+
+.brand-inline small{
+  display:block;
+  margin-top:3px;
 }
 
 .sidebar-logo{
-  width:118px;
-  height:60px;
+  width:108px;
+  height:auto;
+  max-height:54px;
 }
 
 .sidebar{
   background:linear-gradient(180deg,#07294e 0%,#061d38 100%);
 }
 
-.sidebar-brand{min-height:84px}
+.sidebar-brand{
+  min-height:84px;
+}
 
 .nav-item.active{
   box-shadow:inset 3px 0 var(--cerrados-red);
   background:rgba(255,255,255,.10);
 }
 
-.primary-button{background:var(--cerrados-blue-2)}
-.primary-button:hover{background:var(--cerrados-blue)}
-.text-button,.positive{color:var(--cerrados-blue-2)!important}
-.eyebrow{color:var(--cerrados-red)}
-.eyebrow.light{color:#fff}
-.progress div{background:linear-gradient(90deg,var(--cerrados-blue-2),#1671c7)}
-.pill.green{background:#e8f2ff;color:var(--cerrados-blue)}
-.stat-icon.green,.quick-icon{background:#eaf3ff;color:var(--cerrados-blue-2)}
-.input-wrap:focus-within,input:focus,select:focus{border-color:var(--cerrados-blue-2);box-shadow:0 0 0 3px rgba(11,79,156,.10)}
-.demo-note,.info-box{background:#eef5ff;color:#45617f}
-.demo-note strong{color:var(--cerrados-blue)}
-.logout,.negative,.text-danger{color:var(--cerrados-red)!important}
+.primary-button{
+  background:var(--cerrados-blue-2);
+}
+
+.primary-button:hover{
+  background:var(--cerrados-blue);
+}
+
+.text-button,
+.positive{
+  color:var(--cerrados-blue-2)!important;
+}
+
+.eyebrow{
+  color:var(--cerrados-red);
+}
+
+.eyebrow.light{
+  color:#fff;
+}
+
+.progress div{
+  background:linear-gradient(90deg,var(--cerrados-blue-2),#1671c7);
+}
+
+.pill.green{
+  background:#e8f2ff;
+  color:var(--cerrados-blue);
+}
+
+.stat-icon.green,
+.quick-icon{
+  background:#eaf3ff;
+  color:var(--cerrados-blue-2);
+}
+
+.input-wrap:focus-within,
+input:focus,
+select:focus{
+  border-color:var(--cerrados-blue-2);
+  box-shadow:0 0 0 3px rgba(11,79,156,.10);
+}
+
+.demo-note,
+.info-box{
+  background:#eef5ff;
+  color:#45617f;
+}
+
+.demo-note strong{
+  color:var(--cerrados-blue);
+}
+
+.logout,
+.negative,
+.text-danger{
+  color:var(--cerrados-red)!important;
+}
 
 @media(max-width:850px){
-  .login-logo-large{width:260px;height:134px}
-  .login-brand-panel{padding-left:32px}
+  .login-logo-large{width:210px}
 }
