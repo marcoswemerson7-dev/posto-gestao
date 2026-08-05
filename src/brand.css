@@ -6,19 +6,41 @@
   --cerrados-ink:#0f172a;
 }
 
-/* Área principal do login em tom claro para destacar a logomarca azul/vermelha */
+/* Área principal do login em tom claro para destacar a marca */
 .login-brand-panel{
   background:linear-gradient(145deg,#eef5fc 0%,#dbeaf8 55%,#cbdff2 100%);
   color:var(--cerrados-blue);
   flex-direction:column;
   align-items:flex-start;
   justify-content:center;
-  gap:12px;
+  gap:10px;
+  position:relative;
+}
+
+/* A tela principal ainda possui o ícone antigo no JSX.
+   Escondemos o ícone e usamos a logomarca real como elemento visual. */
+.login-brand-panel .brand-mark,
+.login-card .brand-mark{
+  display:none!important;
+}
+
+.login-brand-panel::before{
+  content:"";
+  display:block;
+  width:360px;
+  height:150px;
+  max-width:82%;
+  background-image:url('/logo-posto.webp');
+  background-repeat:no-repeat;
+  background-position:left top;
+  background-size:contain;
+  margin:0 0 8px 0;
+  filter:drop-shadow(0 10px 20px rgba(6,59,122,.14));
 }
 
 .login-brand-panel h1{
   color:#082f5d;
-  margin:12px 0 10px;
+  margin:10px 0 10px;
   line-height:1.06;
 }
 
@@ -31,53 +53,35 @@
   color:var(--cerrados-red)!important;
 }
 
-.brand-logo{
-  display:block;
-  flex:0 0 auto;
-}
-
-/* Remove os antigos quadrados de ícone atrás da marca no login */
-.login-brand-panel .brand-mark,
-.login-card .brand-mark{
-  display:none!important;
-}
-
-/* A imagem original possui espaço transparente embaixo.
-   O object-fit cover recorta esse espaço e mostra somente a marca. */
-.login-logo-large{
-  width:360px;
-  height:205px;
-  max-width:82%;
-  object-fit:cover;
-  object-position:center top;
-  margin:0 0 4px 0;
-  filter:drop-shadow(0 10px 20px rgba(6,59,122,.14));
-}
-
 .login-brand-panel > div:not(.brand-mark){
   width:100%;
 }
 
-/* Cabeçalho do cartão branco */
+/* Cabeçalho do cartão branco: logo separada do texto */
 .brand-inline{
   display:flex!important;
   flex-direction:column;
   align-items:flex-start!important;
   justify-content:flex-start;
   gap:8px!important;
-  min-height:128px;
+  min-height:126px;
   margin-bottom:6px;
+  position:relative;
 }
 
-.login-logo-small{
-  width:210px;
-  height:118px;
-  object-fit:cover;
-  object-position:center top;
+.brand-inline::before{
+  content:"";
+  display:block;
+  width:205px;
+  height:86px;
+  background-image:url('/logo-posto.webp');
+  background-repeat:no-repeat;
+  background-position:left top;
+  background-size:contain;
   margin:0;
 }
 
-/* O nome já está dentro da própria logomarca */
+/* O nome já faz parte da própria logomarca */
 .brand-inline strong{
   display:none!important;
 }
@@ -91,14 +95,31 @@
 }
 
 .login-title{
-  margin-top:4px;
+  margin-top:2px;
+}
+
+/* Caso LoginPage.tsx seja usado em outra tela, mantém as imagens compatíveis */
+.brand-logo{
+  display:block;
+  object-fit:contain;
+}
+
+.login-logo-large{
+  width:360px;
+  max-width:82%;
+  height:auto;
+}
+
+.login-logo-small{
+  width:205px;
+  height:auto;
 }
 
 .sidebar-logo{
   width:138px;
-  height:76px;
-  object-fit:cover;
-  object-position:center top;
+  height:auto;
+  max-height:76px;
+  object-fit:contain;
 }
 
 .brand-mark{
@@ -174,6 +195,8 @@ select:focus{
 }
 
 @media(max-width:850px){
-  .login-logo-large{width:300px;height:170px;max-width:88%}
-  .login-logo-small{width:190px;height:108px}
+  .login-brand-panel::before{width:290px;height:125px;max-width:88%}
+  .brand-inline::before{width:185px;height:78px}
+  .login-logo-large{width:290px;max-width:88%}
+  .login-logo-small{width:185px}
 }
