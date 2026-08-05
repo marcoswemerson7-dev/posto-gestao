@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react';
+import {
+  BarChart3,
+  Droplets,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  Mail,
+  Users,
+  WalletCards,
+} from 'lucide-react';
 
 type Props = {
   onLogin: () => void;
@@ -18,22 +27,34 @@ export default function LoginPage({ onLogin }: Props) {
   return (
     <div className="login-shell">
       <section className="login-brand-panel">
-        <img className="brand-logo login-logo-large" src="/logo-posto.webp" alt="Posto dos Cerrados" />
-        <div>
-          <span className="eyebrow light">GESTÃO INTELIGENTE</span>
+        <div className="login-brand-content">
+          <img
+            className="login-logo-large"
+            src="/logo-posto.png"
+            alt="Posto dos Cerrados"
+          />
+
           <h1>Posto dos Cerrados</h1>
-          <p>Controle de caixa, clientes, fiado e combustível em um único lugar.</p>
+          <div className="login-title-line" />
+          <p>
+            Gestão inteligente de caixa, vendas, estoque em litros, clientes e
+            contas a receber.
+          </p>
+
+          <div className="login-feature-icons" aria-hidden="true">
+            <div className="login-feature-item"><Droplets size={28} /></div>
+            <div className="login-feature-item"><WalletCards size={28} /></div>
+            <div className="login-feature-item"><Users size={28} /></div>
+            <div className="login-feature-item"><BarChart3 size={28} /></div>
+          </div>
         </div>
       </section>
 
       <section className="login-card-wrap">
         <form className="login-card" onSubmit={submit}>
-          <div className="brand-inline">
-            <img className="brand-logo login-logo-small" src="/logo-posto.webp" alt="Posto dos Cerrados" />
-            <div>
-              <strong>Posto dos Cerrados</strong>
-              <small>Acesso ao sistema</small>
-            </div>
+          <div className="login-access-badge">
+            <LockKeyhole size={16} />
+            <span>Acesso ao sistema</span>
           </div>
 
           <div className="login-title">
@@ -45,7 +66,12 @@ export default function LoginPage({ onLogin }: Props) {
             E-mail
             <div className="input-wrap">
               <Mail size={18} />
-              <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="seu@email.com" />
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                placeholder="Digite seu e-mail"
+              />
             </div>
           </label>
 
@@ -53,23 +79,36 @@ export default function LoginPage({ onLogin }: Props) {
             Senha
             <div className="input-wrap">
               <LockKeyhole size={18} />
-              <input value={password} onChange={(e) => setPassword(e.target.value)} type={showPassword ? 'text' : 'password'} placeholder="Sua senha" />
-              <button className="icon-button" type="button" onClick={() => setShowPassword((v) => !v)} aria-label="Mostrar senha">
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Digite sua senha"
+              />
+              <button
+                className="icon-button"
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label="Mostrar senha"
+              >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </label>
 
           <div className="login-row">
-            <label className="checkbox-label"><input type="checkbox" defaultChecked /> Manter conectado</label>
+            <label className="checkbox-label">
+              <input type="checkbox" defaultChecked />
+              Lembrar meu acesso
+            </label>
             <button className="text-button" type="button">Esqueci minha senha</button>
           </div>
 
           <button className="primary-button" type="submit">Entrar no sistema</button>
 
           <div className="demo-note">
-            <strong>Demo inicial</strong>
-            <span>Use os dados já preenchidos para entrar.</span>
+            <strong>Acesso inicial / demonstração</strong>
+            <span>admin@postogestao.com &nbsp;•&nbsp; 123456</span>
           </div>
         </form>
       </section>
