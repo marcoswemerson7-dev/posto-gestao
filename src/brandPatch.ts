@@ -1,4 +1,4 @@
-const LOGO = '/logo-posto.webp';
+const LOGO = '/logo-posto.png';
 
 function migrateStoredStationName() {
   try {

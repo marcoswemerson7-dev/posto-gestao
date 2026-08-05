@@ -26,7 +26,7 @@ export default function Sidebar({ onLogout }: Props) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <img className="brand-logo sidebar-logo" src="/logo-posto.webp" alt="Posto dos Cerrados" />
+        <img className="brand-logo sidebar-logo" src="/logo-posto.png" alt="Posto dos Cerrados" />
         <div><strong>Posto dos Cerrados</strong><small>Gestão do Posto</small></div>
       </div>
 
