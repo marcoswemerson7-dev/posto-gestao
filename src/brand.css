@@ -6,16 +6,13 @@
   --cerrados-ink:#0f172a;
 }
 
+/* Identidade visual principal */
 .login-brand-panel{
-  background:linear-gradient(135deg,var(--cerrados-blue) 0%,#0a4f8f 62%,#5c3b66 100%);
+  background:linear-gradient(145deg,#063b7a 0%,#084b8d 58%,#082f5d 100%);
   flex-direction:column;
   align-items:flex-start;
   justify-content:center;
-  gap:18px;
-}
-
-.brand-mark{
-  background:var(--cerrados-blue-2);
+  gap:14px;
 }
 
 .brand-logo{
@@ -24,13 +21,21 @@
   flex:0 0 auto;
 }
 
-/* Logo principal do login: separada do texto, sem sobreposição */
+/* Remove os antigos quadrados azuis de ícone atrás da marca no login */
+.login-brand-panel .brand-mark,
+.login-card .brand-mark{
+  display:none!important;
+}
+
+/* Logo principal da área azul */
 .login-logo-large{
-  width:235px;
+  width:220px;
   height:auto;
-  max-height:none;
-  margin:0 0 4px 0;
-  filter:drop-shadow(0 10px 22px rgba(0,0,0,.18));
+  max-height:118px;
+  margin:0 0 8px 0;
+  object-fit:contain;
+  object-position:left center;
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.15));
 }
 
 .login-brand-panel > div:not(.brand-mark){
@@ -38,46 +43,60 @@
 }
 
 .login-brand-panel h1{
-  margin:12px 0 10px;
-  line-height:1.05;
+  margin:14px 0 10px;
+  line-height:1.06;
 }
 
 .login-brand-panel p{
   margin:0;
 }
 
-/* Cabeçalho do cartão: logo compacta, texto ao lado */
+/* Cabeçalho branco do login: logo em uma linha e o texto abaixo, sem sobreposição */
 .brand-inline{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  min-height:64px;
+  display:flex!important;
+  flex-direction:column;
+  align-items:flex-start!important;
+  justify-content:flex-start;
+  gap:5px!important;
+  min-height:92px;
+  margin-bottom:4px;
 }
 
 .login-logo-small{
-  width:112px;
-  height:auto;
-  max-height:58px;
+  width:178px;
+  height:72px;
+  max-height:72px;
+  object-fit:contain;
+  object-position:left center;
+  margin:0;
 }
 
-.brand-inline > div:last-child{
-  min-width:0;
-}
-
+/* O nome já faz parte da própria logomarca, então evitamos duplicação visual */
 .brand-inline strong{
-  display:block;
-  line-height:1.15;
+  display:none!important;
 }
 
 .brand-inline small{
-  display:block;
-  margin-top:3px;
+  display:block!important;
+  margin:0 0 0 2px!important;
+  color:#6f7f95!important;
+  font-size:13px;
+  line-height:1.2;
+}
+
+/* Garante distância segura entre a marca e o título Entrar */
+.login-title{
+  margin-top:2px;
 }
 
 .sidebar-logo{
   width:108px;
   height:auto;
   max-height:54px;
+}
+
+.brand-mark{
+  background:var(--cerrados-blue-2);
 }
 
 .sidebar{
@@ -153,5 +172,6 @@ select:focus{
 }
 
 @media(max-width:850px){
-  .login-logo-large{width:210px}
+  .login-logo-large{width:200px;max-height:108px}
+  .login-logo-small{width:160px;height:66px}
 }
