@@ -1,120 +1,231 @@
 :root{
   --cerrados-blue:#063b7a;
   --cerrados-blue-2:#0b4f9c;
-  --cerrados-red:#f0191e;
-  --cerrados-red-dark:#c91418;
+  --cerrados-red:#ed1c24;
+  --cerrados-red-2:#cf171d;
+  --cerrados-red-dark:#a91116;
   --cerrados-ink:#0f172a;
 }
 
-/* Área principal do login em tom claro para destacar a marca */
+/* =========================
+   LOGIN - IDENTIDADE DO POSTO
+   ========================= */
+.login-shell{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:58% 42%;
+  background:#fff;
+}
+
+/* Lado da logomarca: branco, limpo e com textos em azul */
 .login-brand-panel{
-  background:linear-gradient(145deg,#eef5fc 0%,#dbeaf8 55%,#cbdff2 100%);
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(145deg,#ffffff 0%,#f7f9fc 100%);
   color:var(--cerrados-blue);
   flex-direction:column;
   align-items:flex-start;
   justify-content:center;
-  gap:10px;
-  position:relative;
+  gap:12px;
+  padding:64px 68px;
+  border-right:1px solid rgba(6,59,122,.08);
 }
 
-/* A tela principal ainda possui o ícone antigo no JSX.
-   Escondemos o ícone e usamos a logomarca real como elemento visual. */
+.login-brand-panel::after{
+  content:"";
+  position:absolute;
+  width:420px;
+  height:420px;
+  border-radius:50%;
+  right:-180px;
+  top:-170px;
+  background:rgba(6,59,122,.035);
+}
+
+/* esconde o ícone antigo, caso ainda exista no JSX */
 .login-brand-panel .brand-mark,
 .login-card .brand-mark{
   display:none!important;
 }
 
+/* Logo real em boa evidência */
 .login-brand-panel::before{
   content:"";
   display:block;
-  width:360px;
-  height:150px;
-  max-width:82%;
+  width:440px;
+  height:190px;
+  max-width:84%;
   background-image:url('/logo-posto.webp');
   background-repeat:no-repeat;
-  background-position:left top;
+  background-position:left center;
   background-size:contain;
-  margin:0 0 8px 0;
-  filter:drop-shadow(0 10px 20px rgba(6,59,122,.14));
-}
-
-.login-brand-panel h1{
-  color:#082f5d;
-  margin:10px 0 10px;
-  line-height:1.06;
-}
-
-.login-brand-panel p{
-  color:#294c70;
-  margin:0;
-}
-
-.login-brand-panel .eyebrow.light{
-  color:var(--cerrados-red)!important;
+  margin:0 0 16px 0;
+  filter:drop-shadow(0 12px 24px rgba(6,59,122,.10));
+  position:relative;
+  z-index:2;
 }
 
 .login-brand-panel > div:not(.brand-mark){
   width:100%;
+  position:relative;
+  z-index:2;
 }
 
-/* Cabeçalho do cartão branco: logo separada do texto */
+.login-brand-panel .eyebrow.light{
+  color:var(--cerrados-red)!important;
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.16em;
+}
+
+.login-brand-panel h1{
+  color:var(--cerrados-blue);
+  margin:8px 0 12px;
+  line-height:1.04;
+  font-weight:800;
+  letter-spacing:-1px;
+}
+
+.login-brand-panel p{
+  color:#2b4f73;
+  margin:0;
+  max-width:620px;
+}
+
+/* Lado do login: vermelho da logomarca */
+.login-card-wrap{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:42px;
+  background:linear-gradient(145deg,#f3242b 0%,#dc1a21 48%,#b81117 100%);
+}
+
+.login-card{
+  width:100%;
+  max-width:450px;
+  background:rgba(255,255,255,.985);
+  border-radius:28px;
+  padding:38px 34px 32px;
+  border:1px solid rgba(255,255,255,.28);
+  box-shadow:0 28px 70px rgba(80,0,4,.24);
+}
+
+/* Remove logo do cartão de login e centraliza acesso */
 .brand-inline{
   display:flex!important;
   flex-direction:column;
-  align-items:flex-start!important;
-  justify-content:flex-start;
-  gap:8px!important;
-  min-height:126px;
-  margin-bottom:6px;
-  position:relative;
+  align-items:center!important;
+  justify-content:center;
+  text-align:center;
+  gap:0!important;
+  min-height:auto;
+  margin:0 0 30px;
 }
 
 .brand-inline::before{
   content:"";
   display:block;
-  width:205px;
-  height:86px;
-  background-image:url('/logo-posto.webp');
-  background-repeat:no-repeat;
-  background-position:left top;
-  background-size:contain;
-  margin:0;
+  width:42px;
+  height:4px;
+  border-radius:999px;
+  background:var(--cerrados-red);
+  margin-bottom:14px;
 }
 
-/* O nome já faz parte da própria logomarca */
 .brand-inline strong{
   display:none!important;
 }
 
 .brand-inline small{
-  display:block!important;
-  margin:0 0 0 1px!important;
-  color:#6f7f95!important;
+  display:inline-flex!important;
+  align-items:center;
+  justify-content:center;
+  margin:0!important;
+  padding:8px 16px;
+  border-radius:999px;
+  background:#fff0f1;
+  color:var(--cerrados-red-2)!important;
   font-size:13px;
+  font-weight:700;
   line-height:1.2;
 }
 
-.login-title{
-  margin-top:2px;
+.brand-inline::after{
+  content:none;
 }
 
-/* Caso LoginPage.tsx seja usado em outra tela, mantém as imagens compatíveis */
+.login-title{
+  margin-top:0;
+}
+
+.login-title h2{
+  color:#751016;
+}
+
+.login-title p{
+  color:#74839a;
+}
+
+.login-card > label{
+  color:#721218;
+}
+
+.input-wrap:focus-within,
+input:focus,
+select:focus{
+  border-color:var(--cerrados-red)!important;
+  box-shadow:0 0 0 3px rgba(237,28,36,.10)!important;
+}
+
+.text-button{
+  color:var(--cerrados-red-2)!important;
+}
+
+.login-card .primary-button{
+  background:linear-gradient(135deg,#ed1c24 0%,#c9161d 100%);
+  color:#fff;
+  box-shadow:0 10px 22px rgba(201,22,29,.20);
+}
+
+.login-card .primary-button:hover{
+  background:linear-gradient(135deg,#ff3037 0%,#b81117 100%);
+}
+
+.login-card .checkbox-label input{
+  accent-color:var(--cerrados-red);
+}
+
+.demo-note{
+  background:#fff4f5;
+  color:#87565d;
+  border-color:#ffe0e2;
+}
+
+.demo-note strong{
+  color:var(--cerrados-red-2);
+}
+
+/* Compatibilidade com LoginPage.tsx caso seja reutilizado */
 .brand-logo{
   display:block;
   object-fit:contain;
 }
 
 .login-logo-large{
-  width:360px;
-  max-width:82%;
+  width:440px;
+  max-width:84%;
   height:auto;
 }
 
 .login-logo-small{
-  width:205px;
-  height:auto;
+  display:none!important;
 }
 
+/* =========================
+   SISTEMA INTERNO
+   ========================= */
 .sidebar-logo{
   width:138px;
   height:auto;
@@ -123,7 +234,7 @@
 }
 
 .brand-mark{
-  background:var(--cerrados-blue-2);
+  background:var(--cerrados-red);
 }
 
 .sidebar{
@@ -140,16 +251,18 @@
 }
 
 .primary-button{
-  background:var(--cerrados-blue-2);
+  background:var(--cerrados-red);
 }
 
 .primary-button:hover{
-  background:var(--cerrados-blue);
+  background:var(--cerrados-red-2);
 }
 
 .text-button,
-.positive{
-  color:var(--cerrados-blue-2)!important;
+.negative,
+.text-danger,
+.logout{
+  color:var(--cerrados-red)!important;
 }
 
 .eyebrow{
@@ -157,46 +270,50 @@
 }
 
 .progress div{
-  background:linear-gradient(90deg,var(--cerrados-blue-2),#1671c7);
+  background:linear-gradient(90deg,var(--cerrados-red),#ff4c53);
 }
 
 .pill.green{
-  background:#e8f2ff;
-  color:var(--cerrados-blue);
+  background:#fff0f1;
+  color:var(--cerrados-red-2);
 }
 
 .stat-icon.green,
 .quick-icon{
-  background:#eaf3ff;
-  color:var(--cerrados-blue-2);
+  background:#fff0f1;
+  color:var(--cerrados-red-2);
 }
 
-.input-wrap:focus-within,
-input:focus,
-select:focus{
-  border-color:var(--cerrados-blue-2);
-  box-shadow:0 0 0 3px rgba(11,79,156,.10);
+.positive{
+  color:var(--cerrados-blue-2)!important;
 }
 
-.demo-note,
-.info-box{
-  background:#eef5ff;
-  color:#45617f;
-}
-
-.demo-note strong{
-  color:var(--cerrados-blue);
-}
-
-.logout,
-.negative,
-.text-danger{
-  color:var(--cerrados-red)!important;
+@media(max-width:1050px){
+  .login-shell{grid-template-columns:52% 48%}
+  .login-brand-panel{padding:54px 44px}
+  .login-brand-panel::before{width:360px;height:160px;max-width:90%}
+  .login-logo-large{width:360px;max-width:90%}
 }
 
 @media(max-width:850px){
-  .login-brand-panel::before{width:290px;height:125px;max-width:88%}
-  .brand-inline::before{width:185px;height:78px}
-  .login-logo-large{width:290px;max-width:88%}
-  .login-logo-small{width:185px}
+  .login-shell{display:block}
+  .login-brand-panel{
+    min-height:390px;
+    padding:42px 28px;
+    text-align:center;
+    align-items:center;
+  }
+  .login-brand-panel::before{
+    width:300px;
+    height:135px;
+    max-width:90%;
+    background-position:center;
+    margin-left:auto;
+    margin-right:auto;
+  }
+  .login-brand-panel h1,
+  .login-brand-panel p,
+  .login-brand-panel .eyebrow.light{text-align:center}
+  .login-card-wrap{min-height:auto;padding:24px 18px 42px}
+  .login-card{max-width:500px;padding:32px 24px}
 }
