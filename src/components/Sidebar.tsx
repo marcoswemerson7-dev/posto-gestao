@@ -26,8 +26,8 @@ export default function Sidebar({ onLogout }: Props) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <div className="brand-mark"><Fuel size={24} /></div>
-        <div><strong>Posto Gestão</strong><small>Painel Administrativo</small></div>
+        <img className="brand-logo sidebar-logo" src="/logo-posto.webp" alt="Posto dos Cerrados" />
+        <div><strong>Posto dos Cerrados</strong><small>Gestão do Posto</small></div>
       </div>
 
       <nav>
