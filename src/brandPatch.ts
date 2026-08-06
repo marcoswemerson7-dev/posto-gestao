@@ -120,7 +120,7 @@ function applyBrand() {
 
   nodes.forEach((node) => {
     if (node.nodeValue?.includes('Posto Gestão')) {
-      node.nodeValue = node.nodeValue.replaceAll('Posto Gestão', 'Posto dos Cerrados');
+      node.nodeValue = node.nodeValue.split('Posto Gestão').join('Posto dos Cerrados');
     }
   });
 
