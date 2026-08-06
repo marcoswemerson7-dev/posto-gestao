@@ -242,9 +242,538 @@ function CashModern({state,setState,audit}:any){
 
 function Cash({state,setState,audit}:any){const active=state.cashSessions.find((c:CashSession)=>c.status==='Aberto');const moves=active?state.cashMoves.filter((m:CashMove)=>m.cashId===active.id):[];const balance=active?active.opening+moves.reduce((a:number,m:CashMove)=>a+(['Saída','Sangria','Despesa'].includes(m.type)?-m.value:m.value),0):0;const [modal,setModal]=useState<any>(null);function add(type:string){if(!active)return alert('Abra um caixa.');setModal({type,value:'',description:''})}function saveMove(){const v=Number(modal.value);if(!v)return;const m:CashMove={id:uid(),cashId:active.id,date:nowIso(),type:modal.type,value:v,description:modal.description||modal.type};setState((s:State)=>({...s,cashMoves:[m,...s.cashMoves]}));audit('Caixa',modal.type,`${modal.description||modal.type}: ${money(v)}`);setModal(null)}function close(){if(!active)return;const declared=Number(prompt(`Saldo esperado: ${money(balance)}\nInforme o valor contado:`));if(Number.isNaN(declared))return;setState((s:State)=>({...s,cashSessions:s.cashSessions.map((c:CashSession)=>c.id===active.id?{...c,status:'Fechado',closedAt:nowIso(),closingDeclared:declared}:c)}));audit('Caixa','Fechamento',`Declarado ${money(declared)} | Esperado ${money(balance)}`)}function open(){const opening=Number(prompt('Saldo inicial do caixa:','0'));if(Number.isNaN(opening))return;const c:CashSession={id:uid(),openedAt:nowIso(),opening,status:'Aberto',operator:'Administrador'};setState((s:State)=>({...s,cashSessions:[c,...s.cashSessions]}));audit('Caixa','Abertura',`Saldo inicial ${money(opening)}`)}return <><Header eyebrow="FINANCEIRO" title="Controle de Caixa" subtitle="Abertura, entradas, saídas, sangrias, suprimentos e fechamento." action={active?<button className="danger-button" onClick={close}>Fechar Caixa</button>:<button className="primary-button compact" onClick={open}><Plus size={17}/>Abrir Caixa</button>}/><section className="stats-grid"><Card title="Saldo inicial" value={active?money(active.opening):'R$ 0,00'} sub={active?dateBR(active.openedAt):'Caixa fechado'} icon={Banknote}/><Card title="Entradas" value={money(moves.filter((m:CashMove)=>!['Saída','Sangria','Despesa'].includes(m.type)).reduce((a:number,b:CashMove)=>a+b.value,0))} sub="Movimentações positivas" icon={ArrowDownToLine} tone="blue"/><Card title="Saídas" value={money(moves.filter((m:CashMove)=>['Saída','Sangria','Despesa'].includes(m.type)).reduce((a:number,b:CashMove)=>a+b.value,0))} sub="Movimentações negativas" icon={ArrowUpFromLine} tone="orange"/><Card title="Saldo esperado" value={money(balance)} sub="Valor calculado" icon={WalletCards}/></section>{active&&<div className="quick-grid"><button onClick={()=>add('Entrada')}><div className="quick-icon"><ArrowDownToLine/></div><div><b>Entrada</b><span>Receita avulsa</span></div></button><button onClick={()=>add('Saída')}><div className="quick-icon"><ArrowUpFromLine/></div><div><b>Saída</b><span>Retirada avulsa</span></div></button><button onClick={()=>add('Sangria')}><div className="quick-icon"><Banknote/></div><div><b>Sangria</b><span>Retirar numerário</span></div></button><button onClick={()=>add('Suprimento')}><div className="quick-icon"><Plus/></div><div><b>Suprimento</b><span>Adicionar numerário</span></div></button></div>}<div className="panel"><h2>Movimentações do caixa</h2>{moves.length===0?<Empty text="Nenhuma movimentação neste caixa."/>:<div className="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th></tr></thead><tbody>{moves.map((m:CashMove)=><tr key={m.id}><td>{dateBR(m.date)}</td><td><Status tone={['Saída','Sangria','Despesa'].includes(m.type)?'orange':'green'}>{m.type}</Status></td><td>{m.description}</td><td className={['Saída','Sangria','Despesa'].includes(m.type)?'negative':'positive'}>{money(m.value)}</td></tr>)}</tbody></table></div>}</div>{modal&&<Modal title={`Nova ${modal.type}`} onClose={()=>setModal(null)}><div className="form-grid"><label>Valor<input type="number" step="0.01" value={modal.value} onChange={e=>setModal({...modal,value:e.target.value})}/></label><label>Descrição<input value={modal.description} onChange={e=>setModal({...modal,description:e.target.value})}/></label><button className="primary-button span2" onClick={saveMove}>Salvar</button></div></Modal>}</>}
 
-function Sales({state,setState,audit}:any){const [search,setSearch]=useState('');const [show,setShow]=useState(false);const [f,setF]=useState<any>({fuelId:state.fuels[0]?.id||'',tankId:state.tanks[0]?.id||'',liters:'',payment:'Dinheiro',clientId:'',employeeId:''});const sales=state.sales.filter((s:Sale)=>{const c=state.clients.find((x:Client)=>x.id===s.clientId);const fuel=state.fuels.find((x:FuelItem)=>x.id===s.fuelId);return `${c?.name||''} ${fuel?.name||''} ${s.payment}`.toLowerCase().includes(search.toLowerCase())});function chooseFuel(id:string){const tank=state.tanks.find((t:Tank)=>t.fuelId===id);setF({...f,fuelId:id,tankId:tank?.id||''})}function save(){const fuel:FuelItem=state.fuels.find((x:FuelItem)=>x.id===f.fuelId);const tank:Tank=state.tanks.find((x:Tank)=>x.id===f.tankId);const l=Number(f.liters);if(!fuel||!tank||!l)return alert('Preencha combustível, tanque e litros.');if(tank.liters<l)return alert('Estoque insuficiente.');const total=l*fuel.sellPrice;if(f.payment==='Prazo'){if(!f.clientId)return alert('Selecione o cliente para venda a prazo.');const client:Client=state.clients.find((x:Client)=>x.id===f.clientId);if(!client||client.status!=='Ativo')return alert('Cliente não está ativo para crédito.');const debt=state.receivables.filter((r:Receivable)=>r.clientId===client.id&&r.status!=='Pago'&&r.status!=='Cancelado').reduce((a:number,r:Receivable)=>a+(r.original-r.paid),0);if(debt+total>client.limit)return alert(`Limite insuficiente. Disponível: ${money(client.limit-debt)}`)}const sale:Sale={id:uid(),date:nowIso(),clientId:f.clientId||undefined,employeeId:f.employeeId||undefined,fuelId:f.fuelId,tankId:f.tankId,liters:l,price:fuel.sellPrice,total,payment:f.payment,status:'Ativa'};setState((s:State)=>{const receivable=f.payment==='Prazo'?{id:uid(),saleId:sale.id,clientId:f.clientId,original:total,paid:0,due:dayISO(30),status:'Em aberto' as const}:null;const cash=s.cashSessions.find((c:CashSession)=>c.status==='Aberto');const move=cash?{id:uid(),cashId:cash.id,date:nowIso(),type:'Venda' as const,value:total,method:f.payment,description:`Venda ${fuel.name} - ${liters(l)}`,refId:sale.id}:null;return {...s,sales:[sale,...s.sales],tanks:s.tanks.map((t:Tank)=>t.id===tank.id?{...t,liters:t.liters-l}:t),stockMoves:[{id:uid(),date:nowIso(),tankId:tank.id,type:'Venda' as const,liters:-l,description:`Venda ${sale.id}`},...s.stockMoves],receivables:receivable?[receivable,...s.receivables]:s.receivables,cashMoves:move?[move,...s.cashMoves]:s.cashMoves}});audit('Vendas','Nova venda',`${fuel.name} | ${liters(l)} | ${money(total)} | ${f.payment}`);setShow(false);setF({...f,liters:'',clientId:''})}function cancel(sale:Sale){if(sale.status==='Cancelada')return;if(!confirm('Cancelar esta venda e devolver litros ao estoque?'))return;setState((s:State)=>({...s,sales:s.sales.map((x:Sale)=>x.id===sale.id?{...x,status:'Cancelada'}:x),tanks:s.tanks.map((t:Tank)=>t.id===sale.tankId?{...t,liters:t.liters+sale.liters}:t),receivables:s.receivables.map((r:Receivable)=>r.saleId===sale.id?{...r,status:'Cancelado'}:r),cashMoves:s.cashMoves.filter((m:CashMove)=>m.refId!==sale.id),stockMoves:[{id:uid(),date:nowIso(),tankId:sale.tankId,type:'Cancelamento' as const,liters:sale.liters,description:`Cancelamento venda ${sale.id}`},...s.stockMoves]}));audit('Vendas','Cancelamento',`Venda ${sale.id} cancelada`)}return <><Header eyebrow="OPERAÇÃO" title="Vendas / Abastecimentos" subtitle="Registre vendas e baixa automática do estoque."/><Toolbar search={search} setSearch={setSearch} button="Nova Venda" onClick={()=>setShow(true)}/><div className="panel no-pad">{sales.length===0?<Empty text="Cadastre sua primeira venda."/>:<div className="table-wrap"><table><thead><tr><th>Data</th><th>Combustível</th><th>Litros</th><th>Valor</th><th>Pagamento</th><th>Cliente</th><th>Status</th><th></th></tr></thead><tbody>{sales.map((s:Sale)=>{const fuel=state.fuels.find((f:FuelItem)=>f.id===s.fuelId);const client=state.clients.find((c:Client)=>c.id===s.clientId);return <tr key={s.id}><td>{dateBR(s.date)}</td><td>{fuel?.name}</td><td>{liters(s.liters)}</td><td>{money(s.total)}</td><td>{s.payment}</td><td>{client?.name||'-'}</td><td><Status tone={s.status==='Ativa'?'green':'gray'}>{s.status}</Status></td><td>{s.status==='Ativa'&&<button className="table-icon danger" onClick={()=>cancel(s)}><X size={16}/></button>}</td></tr>})}</tbody></table></div>}</div>{show&&<Modal title="Nova Venda" onClose={()=>setShow(false)}><div className="form-grid"><label>Combustível<select value={f.fuelId} onChange={e=>chooseFuel(e.target.value)}>{state.fuels.filter((x:FuelItem)=>x.active).map((x:FuelItem)=><option key={x.id} value={x.id}>{x.name} - {money(x.sellPrice)}/L</option>)}</select></label><label>Tanque<select value={f.tankId} onChange={e=>setF({...f,tankId:e.target.value})}>{state.tanks.filter((t:Tank)=>t.fuelId===f.fuelId).map((t:Tank)=><option key={t.id} value={t.id}>{t.name} - {liters(t.liters)}</option>)}</select></label><label>Litros<input type="number" step="0.001" value={f.liters} onChange={e=>setF({...f,liters:e.target.value})}/></label><label>Pagamento<select value={f.payment} onChange={e=>setF({...f,payment:e.target.value})}>{['Dinheiro','PIX','Débito','Crédito','Prazo'].map(x=><option key={x}>{x}</option>)}</select></label>{f.payment==='Prazo'&&<label className="span2">Cliente<select value={f.clientId} onChange={e=>setF({...f,clientId:e.target.value})}><option value="">Selecione...</option>{state.clients.map((c:Client)=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>}<label className="span2">Funcionário<select value={f.employeeId} onChange={e=>setF({...f,employeeId:e.target.value})}><option value="">Não informado</option>{state.employees.filter((e:Employee)=>e.active).map((e:Employee)=><option value={e.id} key={e.id}>{e.name}</option>)}</select></label><button className="primary-button span2" onClick={save}>Concluir venda</button></div></Modal>}</>}
+function Sales({ state, setState, audit }: any) {
+  const [search, setSearch] = useState("");
+  const [show, setShow] = useState(false);
+  const [f, setF] = useState<any>({
+    fuelId: state.fuels[0]?.id || "",
+    tankId: state.tanks[0]?.id || "",
+    liters: "",
+    value: "",
+    lastEdited: "liters",
+    received: "",
+    payment: "Dinheiro",
+    clientId: "",
+    employeeId: "",
+    error: "",
+  });
+  const sales = state.sales.filter((s: Sale) => {
+    const c = state.clients.find((x: Client) => x.id === s.clientId);
+    const fuel = state.fuels.find((x: FuelItem) => x.id === s.fuelId);
+    return `${c?.name || ""} ${fuel?.name || ""} ${s.payment}`
+      .toLowerCase()
+      .includes(search.toLowerCase());
+  });
+  const selectedFuel: FuelItem | undefined = state.fuels.find(
+    (x: FuelItem) => x.id === f.fuelId,
+  );
+  const totalValue = Number(f.value) || 0;
+  const receivedValue = Number(f.received) || 0;
+  const change = receivedValue - totalValue;
+  function editLiters(value: string) {
+    const fuel: FuelItem | undefined = state.fuels.find(
+      (x: FuelItem) => x.id === f.fuelId,
+    );
+    setF({
+      ...f,
+      liters: value,
+      value: value && fuel ? (Number(value) * fuel.sellPrice).toFixed(2) : "",
+      lastEdited: "liters",
+      error: "",
+    });
+  }
+  function editValue(value: string) {
+    const fuel: FuelItem | undefined = state.fuels.find(
+      (x: FuelItem) => x.id === f.fuelId,
+    );
+    setF({
+      ...f,
+      value,
+      liters: value && fuel ? (Number(value) / fuel.sellPrice).toFixed(4) : "",
+      lastEdited: "value",
+      error: "",
+    });
+  }
+  function chooseFuel(id: string) {
+    const fuel: FuelItem | undefined = state.fuels.find(
+      (x: FuelItem) => x.id === id,
+    );
+    const tank = state.tanks.find((t: Tank) => t.fuelId === id);
+    const next = { ...f, fuelId: id, tankId: tank?.id || "", error: "" };
+    if (fuel && f.lastEdited === "value" && f.value)
+      next.liters = (Number(f.value) / fuel.sellPrice).toFixed(4);
+    else if (fuel && f.liters)
+      next.value = (Number(f.liters) * fuel.sellPrice).toFixed(2);
+    setF(next);
+  }
+  function save() {
+    const fuel: FuelItem = state.fuels.find((x: FuelItem) => x.id === f.fuelId);
+    const tank: Tank = state.tanks.find((x: Tank) => x.id === f.tankId);
+    const l = Number(f.liters);
+    const total = Number(f.value);
+    if (!fuel || !tank || !l || l <= 0 || !total || total <= 0) {
+      setF({ ...f, error: "Selecione combustível e tanque e informe litros ou valor válidos." });
+      return;
+    }
+    if (tank.liters < l) {
+      setF({ ...f, error: "Estoque insuficiente no tanque selecionado." });
+      return;
+    }
+    if (f.payment === "Dinheiro" && f.received && receivedValue < total) {
+      setF({ ...f, error: "O valor recebido não pode ser menor que o total da venda." });
+      return;
+    }
+    if (f.payment === "Prazo") {
+      if (!f.clientId) return alert("Selecione o cliente para venda a prazo.");
+      const client: Client = state.clients.find(
+        (x: Client) => x.id === f.clientId,
+      );
+      if (!client || client.status !== "Ativo")
+        return alert("Cliente não está ativo para crédito.");
+      const debt = state.receivables
+        .filter(
+          (r: Receivable) =>
+            r.clientId === client.id &&
+            r.status !== "Pago" &&
+            r.status !== "Cancelado",
+        )
+        .reduce((a: number, r: Receivable) => a + (r.original - r.paid), 0);
+      if (debt + total > client.limit)
+        return alert(
+          `Limite insuficiente. Disponível: ${money(client.limit - debt)}`,
+        );
+    }
+    const sale: Sale = {
+      id: uid(),
+      date: nowIso(),
+      clientId: f.clientId || undefined,
+      employeeId: f.employeeId || undefined,
+      fuelId: f.fuelId,
+      tankId: f.tankId,
+      liters: l,
+      price: fuel.sellPrice,
+      total,
+      payment: f.payment,
+      status: "Ativa",
+    };
+    setState((s: State) => {
+      const receivable =
+        f.payment === "Prazo"
+          ? {
+              id: uid(),
+              saleId: sale.id,
+              clientId: f.clientId,
+              original: total,
+              paid: 0,
+              due: dayISO(30),
+              status: "Em aberto" as const,
+            }
+          : null;
+      const cash = s.cashSessions.find(
+        (c: CashSession) => c.status === "Aberto",
+      );
+      const move = cash
+        ? {
+            id: uid(),
+            cashId: cash.id,
+            date: nowIso(),
+            type: "Venda" as const,
+            value: total,
+            method: f.payment,
+            description: `Venda ${fuel.name} - ${liters(l)}`,
+            refId: sale.id,
+          }
+        : null;
+      return {
+        ...s,
+        sales: [sale, ...s.sales],
+        tanks: s.tanks.map((t: Tank) =>
+          t.id === tank.id ? { ...t, liters: t.liters - l } : t,
+        ),
+        stockMoves: [
+          {
+            id: uid(),
+            date: nowIso(),
+            tankId: tank.id,
+            type: "Venda" as const,
+            liters: -l,
+            description: `Venda ${sale.id}`,
+          },
+          ...s.stockMoves,
+        ],
+        receivables: receivable
+          ? [receivable, ...s.receivables]
+          : s.receivables,
+        cashMoves: move ? [move, ...s.cashMoves] : s.cashMoves,
+      };
+    });
+    audit(
+      "Vendas",
+      "Nova venda",
+      `${fuel.name} | ${liters(l)} | ${money(total)} | ${f.payment}`,
+    );
+    setShow(false);
+    setF({ ...f, liters: "", value: "", received: "", clientId: "", error: "" });
+  }
+  function cancel(sale: Sale) {
+    if (sale.status === "Cancelada") return;
+    if (!confirm("Cancelar esta venda e devolver litros ao estoque?")) return;
+    setState((s: State) => ({
+      ...s,
+      sales: s.sales.map((x: Sale) =>
+        x.id === sale.id ? { ...x, status: "Cancelada" } : x,
+      ),
+      tanks: s.tanks.map((t: Tank) =>
+        t.id === sale.tankId ? { ...t, liters: t.liters + sale.liters } : t,
+      ),
+      receivables: s.receivables.map((r: Receivable) =>
+        r.saleId === sale.id ? { ...r, status: "Cancelado" } : r,
+      ),
+      cashMoves: s.cashMoves.filter((m: CashMove) => m.refId !== sale.id),
+      stockMoves: [
+        {
+          id: uid(),
+          date: nowIso(),
+          tankId: sale.tankId,
+          type: "Cancelamento" as const,
+          liters: sale.liters,
+          description: `Cancelamento venda ${sale.id}`,
+        },
+        ...s.stockMoves,
+      ],
+    }));
+    audit("Vendas", "Cancelamento", `Venda ${sale.id} cancelada`);
+  }
+  return (
+    <>
+      <Header
+        eyebrow="OPERAÇÃO"
+        title="Vendas / Abastecimentos"
+        subtitle="Registre vendas e baixa automática do estoque."
+      />
+      <Toolbar
+        search={search}
+        setSearch={setSearch}
+        button="Nova Venda"
+        onClick={() => setShow(true)}
+      />
+      <div className="panel no-pad">
+        {sales.length === 0 ? (
+          <Empty text="Cadastre sua primeira venda." />
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Combustível</th>
+                  <th>Litros</th>
+                  <th>Valor</th>
+                  <th>Pagamento</th>
+                  <th>Cliente</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {sales.map((s: Sale) => {
+                  const fuel = state.fuels.find(
+                    (f: FuelItem) => f.id === s.fuelId,
+                  );
+                  const client = state.clients.find(
+                    (c: Client) => c.id === s.clientId,
+                  );
+                  return (
+                    <tr key={s.id}>
+                      <td>{dateBR(s.date)}</td>
+                      <td>{fuel?.name}</td>
+                      <td>{liters(s.liters)}</td>
+                      <td>{money(s.total)}</td>
+                      <td>{s.payment}</td>
+                      <td>{client?.name || "-"}</td>
+                      <td>
+                        <Status tone={s.status === "Ativa" ? "green" : "gray"}>
+                          {s.status}
+                        </Status>
+                      </td>
+                      <td>
+                        {s.status === "Ativa" && (
+                          <button
+                            className="table-icon danger"
+                            onClick={() => cancel(s)}
+                          >
+                            <X size={16} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      {show && (
+        <Modal title="Nova Venda" onClose={() => setShow(false)}>
+          <div className="form-grid">
+            <label>
+              Combustível
+              <select
+                value={f.fuelId}
+                onChange={(e) => chooseFuel(e.target.value)}
+              >
+                {state.fuels
+                  .filter((x: FuelItem) => x.active)
+                  .map((x: FuelItem) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name} - {money(x.sellPrice)}/L
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              Tanque
+              <select
+                value={f.tankId}
+                onChange={(e) => setF({ ...f, tankId: e.target.value })}
+              >
+                {state.tanks
+                  .filter((t: Tank) => t.fuelId === f.fuelId)
+                  .map((t: Tank) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} - {liters(t.liters)}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              Litros
+              <input
+                type="number"
+                min="0"
+                step="0.0001"
+                value={f.liters}
+                onChange={(e) => editLiters(e.target.value)}
+                placeholder="0,0000"
+              />
+            </label>
+            <label>
+              Valor (R$)
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={f.value}
+                onChange={(e) => editValue(e.target.value)}
+                placeholder="0,00"
+              />
+            </label>
+            <label>
+              Pagamento
+              <select
+                value={f.payment}
+                onChange={(e) =>
+                  setF({ ...f, payment: e.target.value, received: "", error: "" })
+                }
+              >
+                {["Dinheiro", "PIX", "Débito", "Crédito", "Prazo"].map((x) => (
+                  <option key={x}>{x}</option>
+                ))}
+              </select>
+            </label>
+            {f.payment === "Prazo" && (
+              <label className="span2">
+                Cliente
+                <select
+                  value={f.clientId}
+                  onChange={(e) => setF({ ...f, clientId: e.target.value })}
+                >
+                  <option value="">Selecione...</option>
+                  {state.clients.map((c: Client) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label>
+              Funcionário
+              <select
+                value={f.employeeId}
+                onChange={(e) => setF({ ...f, employeeId: e.target.value })}
+              >
+                <option value="">Não informado</option>
+                {state.employees
+                  .filter((e: Employee) => e.active)
+                  .map((e: Employee) => (
+                    <option value={e.id} key={e.id}>
+                      {e.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            {f.payment === "Dinheiro" && (
+              <>
+                <label>
+                  Valor recebido
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={f.received}
+                    onChange={(e) =>
+                      setF({ ...f, received: e.target.value, error: "" })
+                    }
+                    placeholder="0,00"
+                  />
+                </label>
+                <label>
+                  Troco
+                  <div className={`sale-change ${change < 0 && f.received ? "invalid" : ""}`}>
+                    {money(Math.max(0, change))}
+                  </div>
+                </label>
+              </>
+            )}
+            <div className="sale-summary span2">
+              <span>Preço/Litro <b>{money(selectedFuel?.sellPrice || 0)}</b></span>
+              <span>Litros <b>{Number(f.liters || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} L</b></span>
+              <span>Total <b>{money(totalValue)}</b></span>
+              {f.payment === "Dinheiro" && <span>Troco <b>{money(Math.max(0, change))}</b></span>}
+            </div>
+            {f.error && <div className="error-box span2">{f.error}</div>}
+            <button className="primary-button span2" onClick={save}>
+              Concluir venda
+            </button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
 
-function Fuels({state,setState,audit}:any){const [show,setShow]=useState(false);const [form,setForm]=useState<any>({name:'',sellPrice:'',costPrice:'',min:''});function save(){if(!form.name)return;const x:FuelItem={id:uid(),name:form.name,sellPrice:Number(form.sellPrice),costPrice:Number(form.costPrice),min:Number(form.min),active:true};setState((s:State)=>({...s,fuels:[...s.fuels,x]}));audit('Combustíveis','Cadastro',x.name);setShow(false)}return <><Header eyebrow="PRODUTOS" title="Combustíveis" subtitle="Preços, custos e estoque mínimo." action={<button className="primary-button compact" onClick={()=>setShow(true)}><Plus size={17}/>Novo Combustível</button>}/><div className="panel"><div className="table-wrap"><table><thead><tr><th>Combustível</th><th>Custo/L</th><th>Venda/L</th><th>Margem/L</th><th>Estoque mínimo</th><th>Status</th></tr></thead><tbody>{state.fuels.map((f:FuelItem)=><tr key={f.id}><td><b>{f.name}</b></td><td>{money(f.costPrice)}</td><td>{money(f.sellPrice)}</td><td>{money(f.sellPrice-f.costPrice)}</td><td>{liters(f.min)}</td><td><Status>{f.active?'Ativo':'Inativo'}</Status></td></tr>)}</tbody></table></div></div>{show&&<Modal title="Novo Combustível" onClose={()=>setShow(false)}><div className="form-grid"><label>Nome<input value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label><label>Preço de Custo/L<input type="number" step="0.01" value={form.costPrice} onChange={e=>setForm({...form,costPrice:e.target.value})}/></label><label>Preço de Venda/L<input type="number" step="0.01" value={form.sellPrice} onChange={e=>setForm({...form,sellPrice:e.target.value})}/></label><label>Estoque Mínimo (L)<input type="number" step="0.001" value={form.min} onChange={e=>setForm({...form,min:e.target.value})}/></label><button className="primary-button span2" onClick={save}>Salvar combustível</button></div></Modal>}</>}
+function Fuels({ state, setState, audit }: any) {
+  const [show, setShow] = useState(false);
+  const [form, setForm] = useState<any>({
+    name: "",
+    sellPrice: "",
+    costPrice: "",
+    min: "",
+  });
+  function save() {
+    if (!form.name) return;
+    const x: FuelItem = {
+      id: uid(),
+      name: form.name,
+      sellPrice: Number(form.sellPrice),
+      costPrice: Number(form.costPrice),
+      min: Number(form.min),
+      active: true,
+    };
+    setState((s: State) => ({ ...s, fuels: [...s.fuels, x] }));
+    audit("Combustíveis", "Cadastro", x.name);
+    setShow(false);
+  }
+  return (
+    <>
+      <Header
+        eyebrow="PRODUTOS"
+        title="Combustíveis"
+        subtitle="Preços, custos e estoque mínimo."
+        action={
+          <button
+            className="primary-button compact"
+            onClick={() => setShow(true)}
+          >
+            <Plus size={17} />
+            Novo Combustível
+          </button>
+        }
+      />
+      <div className="panel">
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Combustível</th>
+                <th>Custo/L</th>
+                <th>Venda/L</th>
+                <th>Margem/L</th>
+                <th>Estoque mínimo</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {state.fuels.map((f: FuelItem) => (
+                <tr key={f.id}>
+                  <td>
+                    <b>{f.name}</b>
+                  </td>
+                  <td>{money(f.costPrice)}</td>
+                  <td>{money(f.sellPrice)}</td>
+                  <td>{money(f.sellPrice - f.costPrice)}</td>
+                  <td>{liters(f.min)}</td>
+                  <td>
+                    <Status>{f.active ? "Ativo" : "Inativo"}</Status>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {show && (
+        <Modal title="Novo Combustível" onClose={() => setShow(false)}>
+          <div className="form-grid">
+            <label>
+              Nome
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            </label>
+            <label>
+              Preço de Custo/L
+              <input
+                type="number"
+                step="0.01"
+                value={form.costPrice}
+                onChange={(e) =>
+                  setForm({ ...form, costPrice: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              Preço de Venda/L
+              <input
+                type="number"
+                step="0.01"
+                value={form.sellPrice}
+                onChange={(e) =>
+                  setForm({ ...form, sellPrice: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              Estoque Mínimo (L)
+              <input
+                type="number"
+                step="0.001"
+                value={form.min}
+                onChange={(e) => setForm({ ...form, min: e.target.value })}
+              />
+            </label>
+            <button className="primary-button span2" onClick={save}>
+              Salvar combustível
+            </button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
 
 function Stock({state,setState,audit}:any){const [modal,setModal]=useState<any>(null);function openEntry(){setModal({kind:'entry',tankId:state.tanks[0]?.id||'',liters:'',cost:'',invoice:'',supplierId:''})}function openAdjust(){setModal({kind:'adjust',tankId:state.tanks[0]?.id||'',liters:''})}function save(){const n=Number(modal.liters);if(!n)return;const tank:Tank=state.tanks.find((t:Tank)=>t.id===modal.tankId);if(!tank)return;if(modal.kind==='entry'&&tank.liters+n>tank.capacity&&!confirm('A entrada ultrapassa a capacidade cadastrada. Continuar?'))return;setState((s:State)=>({...s,tanks:s.tanks.map((t:Tank)=>t.id===tank.id?{...t,liters:modal.kind==='entry'?t.liters+n:n}:t),stockMoves:[{id:uid(),date:nowIso(),tankId:tank.id,type:modal.kind==='entry'?'Entrada':'Ajuste',liters:modal.kind==='entry'?n:n-tank.liters,description:modal.kind==='entry'?`Entrada NF ${modal.invoice||'-'}`:'Ajuste manual'},...s.stockMoves]}));audit('Estoque',modal.kind==='entry'?'Entrada':'Ajuste',`${tank.name}: ${liters(n)}`);setModal(null)}return <><Header eyebrow="ESTOQUE" title="Tanques e Movimentações" subtitle="Entrada, saída automática, ajustes e histórico." action={<div className="head-actions"><button className="secondary-button" onClick={openAdjust}><RefreshCw size={16}/>Ajustar</button><button className="primary-button compact" onClick={openEntry}><ArrowDownToLine size={16}/>Entrada de Combustível</button></div>}/><div className="fuel-grid">{state.tanks.map((t:Tank)=>{const f=state.fuels.find((x:FuelItem)=>x.id===t.fuelId);const pct=Math.round(t.liters/t.capacity*100);return <div className="fuel-card" key={t.id}><div className="fuel-top"><div className="stat-icon green"><Droplets size={21}/></div><Status tone={t.liters<=(f?.min||0)?'orange':'green'}>{pct}%</Status></div><b>{t.name} • {f?.name}</b><strong>{liters(t.liters)}</strong><div className="progress"><div style={{width:`${Math.min(pct,100)}%`}}/></div><div className="fuel-meta"><span>Cap. {liters(t.capacity)}</span><span>Mín. {liters(f?.min||0)}</span></div></div>})}</div><div className="panel section-block"><h2>Histórico de estoque</h2>{state.stockMoves.length===0?<Empty text="Nenhuma movimentação de estoque."/>:<div className="table-wrap"><table><thead><tr><th>Data</th><th>Tanque</th><th>Tipo</th><th>Litros</th><th>Descrição</th></tr></thead><tbody>{state.stockMoves.map((m:StockMove)=><tr key={m.id}><td>{dateBR(m.date)}</td><td>{state.tanks.find((t:Tank)=>t.id===m.tankId)?.name}</td><td><Status tone={m.liters<0?'orange':'green'}>{m.type}</Status></td><td className={m.liters<0?'negative':'positive'}>{m.liters>0?'+':''}{liters(m.liters)}</td><td>{m.description}</td></tr>)}</tbody></table></div>}</div>{modal&&<Modal title={modal.kind==='entry'?'Entrada de Combustível':'Ajustar Estoque'} onClose={()=>setModal(null)}><div className="form-grid"><label>Tanque<select value={modal.tankId} onChange={e=>setModal({...modal,tankId:e.target.value})}>{state.tanks.map((t:Tank)=><option key={t.id} value={t.id}>{t.name} - {state.fuels.find((f:FuelItem)=>f.id===t.fuelId)?.name}</option>)}</select></label><label>{modal.kind==='entry'?'Litros recebidos':'Estoque físico atual'}<input type="number" step="0.001" value={modal.liters} onChange={e=>setModal({...modal,liters:e.target.value})}/></label>{modal.kind==='entry'&&<><label>NF / Documento<input value={modal.invoice} onChange={e=>setModal({...modal,invoice:e.target.value})}/></label><label>Fornecedor<select value={modal.supplierId} onChange={e=>setModal({...modal,supplierId:e.target.value})}><option value="">Não informado</option>{state.suppliers.map((s:Supplier)=><option value={s.id} key={s.id}>{s.name}</option>)}</select></label></>}<button className="primary-button span2" onClick={save}>Salvar movimentação</button></div></Modal>}</>}
 
