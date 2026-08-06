@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { generateCashReport } from './cashReport';
 import {
   LayoutDashboard, WalletCards, Fuel, Users, BadgeDollarSign, ReceiptText, Warehouse, Truck,
   UserRoundCog, BarChart3, ShieldCheck, Settings, LogOut, CircleDollarSign, Plus, Search,
@@ -196,51 +197,953 @@ function Dashboard({state,setPage}:{state:State;setPage:(p:Page)=>void}){
  const activeCash=state.cashSessions.find(c=>c.status==='Aberto'); const today=dayISO(); const todaySales=state.sales.filter(s=>s.status==='Ativa'&&s.date.slice(0,10)===today); const total=todaySales.reduce((a,b)=>a+b.total,0); const sold=todaySales.reduce((a,b)=>a+b.liters,0); const due=state.receivables.filter(r=>r.status!=='Pago'&&r.status!=='Cancelado').reduce((a,b)=>a+(b.original-b.paid),0); const cashValue=activeCash?activeCash.opening+state.cashMoves.filter(m=>m.cashId===activeCash.id).reduce((a,m)=>a+(['Saída','Sangria','Despesa'].includes(m.type)?-m.value:m.value),0):0;
  return <><Header eyebrow="VISÃO GERAL" title="Dashboard" subtitle="Resumo operacional em tempo real."/><section className="stats-grid"><Card title="Caixa atual" value={activeCash?money(cashValue):'Fechado'} sub={activeCash?`Aberto ${dateBR(activeCash.openedAt)}`:'Abra um caixa'} icon={WalletCards}/><Card title="Vendas de hoje" value={money(total)} sub={`${todaySales.length} vendas`} icon={ReceiptText} tone="blue"/><Card title="A receber" value={money(due)} sub={`${state.receivables.filter(r=>r.status!=='Pago'&&r.status!=='Cancelado').length} contas`} icon={BadgeDollarSign} tone="orange"/><Card title="Litros vendidos" value={liters(sold)} sub="Hoje" icon={Gauge} tone="blue"/></section><div className="section-title"><div><span className="eyebrow">ESTOQUE</span><h2>Combustíveis</h2></div><button className="secondary-button" onClick={()=>setPage('Estoque')}>Ver estoque completo</button></div><div className="fuel-grid">{state.tanks.map(t=>{const f=state.fuels.find(x=>x.id===t.fuelId)!;const pct=Math.round((t.liters/t.capacity)*100);return <div className="fuel-card" key={t.id}><div className="fuel-top"><div className="stat-icon green"><Fuel size={21}/></div><Status tone={t.liters<=f.min?'orange':'green'}>{t.liters<=f.min?'Baixo':'Normal'}</Status></div><b>{f.name}</b><strong>{liters(t.liters)}</strong><div className="progress"><div style={{width:`${pct}%`}}/></div><div className="fuel-meta"><span>{pct}% do tanque</span><span>{money(f.sellPrice)}/L</span></div></div>})}</div></>}
 
-function CashModern({state,setState,audit}:any){
- const active=state.cashSessions.find((c:CashSession)=>c.status==='Aberto');
- const moves:CashMove[]=active?state.cashMoves.filter((m:CashMove)=>m.cashId===active.id):[];
- const isDebit=(m:CashMove)=>['Saída','Sangria','Despesa'].includes(m.type);
- const entries=moves.filter(m=>!isDebit(m)).reduce((a,m)=>a+m.value,0);
- const exits=moves.filter(isDebit).reduce((a,m)=>a+m.value,0);
- const sangrias=moves.filter(m=>m.type==='Sangria').reduce((a,m)=>a+m.value,0);
- const suprimentos=moves.filter(m=>m.type==='Suprimento').reduce((a,m)=>a+m.value,0);
- const balance=active?active.opening+entries-exits:0;
- const [modal,setModal]=useState<any>(null); const [tab,setTab]=useState('Movimentações'); const [query,setQuery]=useState('');
- const [date,setDate]=useState(''); const [page,setPage]=useState(1); const [perPage,setPerPage]=useState(10);
- const [actions,setActions]=useState<string|null>(null); const [fab,setFab]=useState(false); const [saving,setSaving]=useState(false);
- const tabMap:Record<string,string[]|undefined>={Entradas:['Entrada','Venda','Recebimento'],Saídas:['Saída','Despesa'],Sangrias:['Sangria'],Suprimentos:['Suprimento']};
- const filtered=useMemo(()=>moves.filter(m=>(!tabMap[tab]||tabMap[tab]!.includes(m.type))&&(!date||m.date.slice(0,10)===date)&&(!query||`${m.type} ${m.description} ${m.method||''}`.toLowerCase().includes(query.toLowerCase()))),[moves,tab,date,query]);
- const pages=Math.max(1,Math.ceil(filtered.length/perPage)); const current=Math.min(page,pages); const rows=filtered.slice((current-1)*perPage,current*perPage);
- function add(type:string){if(!active)return;setFab(false);setModal({kind:'move',type,value:'',description:'',method:'Dinheiro',error:''})}
- function saveMove(){const value=Number(modal.value);if(!value||value<=0){setModal({...modal,error:'Informe um valor maior que zero.'});return}setSaving(true);const m:CashMove={id:uid(),cashId:active.id,date:nowIso(),type:modal.type,value,method:modal.method,description:modal.description.trim()||modal.type};setState((s:State)=>({...s,cashMoves:[m,...s.cashMoves]}));audit('Caixa',modal.type,`${m.description}: ${money(value)}`);setSaving(false);setModal(null)}
- function openCash(){const opening=Number(modal.value);if(Number.isNaN(opening)||opening<0){setModal({...modal,error:'Informe um saldo inicial válido.'});return}const c:CashSession={id:uid(),openedAt:nowIso(),opening,status:'Aberto',operator:'Administrador'};setState((s:State)=>({...s,cashSessions:[c,...s.cashSessions]}));audit('Caixa','Abertura',`Saldo inicial ${money(opening)}`);setModal(null)}
- function closeCash(){const declared=Number(modal.declared);if(Number.isNaN(declared)||declared<0){setModal({...modal,error:'Informe o saldo contado.'});return}setState((s:State)=>({...s,cashSessions:s.cashSessions.map((c:CashSession)=>c.id===active.id?{...c,status:'Fechado',closedAt:nowIso(),closingDeclared:declared}:c)}));audit('Caixa','Fechamento',`Declarado ${money(declared)} | Esperado ${money(balance)}`);setModal(null)}
- function exportCsv(){const csv=['Data;Tipo;Descrição;Categoria;Valor;Forma de pagamento',...filtered.map(m=>[dateBR(m.date),m.type,m.description,m.type,m.value.toFixed(2),m.method||''].join(';'))].join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download=`caixa-${dayISO()}.csv`;a.click();URL.revokeObjectURL(a.href)}
- const tabs=[['Movimentações',RefreshCw],['Entradas',ArrowDownToLine],['Saídas',ArrowUpFromLine],['Sangrias',Banknote],['Suprimentos',CirclePlus]] as const;
- return <div className="cash-page">
-  <Header eyebrow="FINANCEIRO" title="Controle de Caixa" subtitle="Acompanhe entradas, saídas e o saldo do caixa em tempo real." action={<div className="cash-head-actions"><button className="cash-export" onClick={exportCsv}><Download size={17}/>Exportar</button>{active?<button className="cash-close" onClick={()=>setModal({kind:'close',declared:balance.toFixed(2),error:''})}><LockKeyhole size={17}/>Fechar Caixa</button>:<button className="cash-close" onClick={()=>setModal({kind:'open',value:'0',error:''})}><Plus size={17}/>Abrir Caixa</button>}</div>}/>
-  <section className="cash-stats">
-   <div className="cash-stat green"><div className="cash-stat-icon"><Banknote/></div><div><span>Saldo inicial</span><strong>{money(active?.opening||0)}</strong><small>{active?`Aberto às ${new Date(active.openedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'Caixa fechado'}</small></div><i>⌁</i></div>
-   <div className="cash-stat blue"><div className="cash-stat-icon"><ArrowDownToLine/></div><div><span>Entradas</span><strong>{money(entries)}</strong><small>Movimentações positivas</small></div><i>⌁</i></div>
-   <div className="cash-stat orange"><div className="cash-stat-icon"><ArrowUpFromLine/></div><div><span>Saídas</span><strong>{money(exits)}</strong><small>Movimentações negativas</small></div><i>⌁</i></div>
-   <div className="cash-stat purple"><div className="cash-stat-icon"><WalletCards/></div><div><span>Saldo esperado</span><strong>{money(balance)}</strong><small>Valor calculado</small></div><i>⌁</i></div>
-  </section>
-  <nav className="cash-tabs" aria-label="Filtros de movimentações">{tabs.map(([label,Icon])=><button key={label} className={tab===label?'active':''} onClick={()=>{setTab(label);setPage(1)}}><Icon size={16}/>{label}</button>)}</nav>
-  <section className="cash-panel">
-   <div className="cash-panel-head"><div><h2>Movimentações do caixa</h2><p>Consulte e acompanhe as operações deste turno.</p></div></div>
-   <div className="cash-panel-tools"><div className="cash-primary-actions"><button className="entry" disabled={!active} title={!active?'Abra o caixa para registrar uma entrada':''} onClick={()=>add('Entrada')}><ArrowDownToLine size={17}/>Nova Entrada</button><button className="exit" disabled={!active} title={!active?'Abra o caixa para registrar uma saída':''} onClick={()=>add('Saída')}><ArrowUpFromLine size={17}/>Nova Saída</button><button className="withdrawal" disabled={!active} title={!active?'Abra o caixa para registrar uma sangria':''} onClick={()=>add('Sangria')}><Banknote size={17}/>Nova Sangria</button><button className="supply" disabled={!active} title={!active?'Abra o caixa para registrar um suprimento':''} onClick={()=>add('Suprimento')}><CirclePlus size={17}/>Novo Suprimento</button></div><div className="cash-filters"><div className="cash-search"><Search size={16}/><input value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}} placeholder="Buscar movimentação..."/></div><label className="cash-date"><CalendarDays size={16}/><input type="date" value={date} onChange={e=>{setDate(e.target.value);setPage(1)}}/></label><button className="cash-filter-button"><SlidersHorizontal size={16}/>Filtros</button></div></div>
-   {filtered.length===0?<Empty text={active?'Nenhuma movimentação encontrada.':'Abra o caixa para registrar movimentações.'}/>:<div className="table-wrap cash-table"><table><thead><tr><th>Data / Hora</th><th>Tipo</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Forma de pagamento</th><th>Ação</th></tr></thead><tbody>{rows.map(m=><tr key={m.id}><td>{dateBR(m.date)}</td><td><Status tone={isDebit(m)?'red':m.type==='Suprimento'?'blue':'green'}>{m.type}</Status></td><td>{m.description}</td><td>{m.type}</td><td className={isDebit(m)?'negative':'positive'}>{isDebit(m)?'-':'+'}{money(m.value)}</td><td>{m.method||'—'}</td><td className="cash-action-cell"><button className="cash-row-action" aria-label="Ações" onClick={()=>setActions(actions===m.id?null:m.id)}><MoreHorizontal size={18}/></button>{actions===m.id&&<div className="cash-action-menu"><button onClick={()=>{setModal({kind:'detail',move:m});setActions(null)}}><Eye size={15}/>Ver detalhes</button><button onClick={()=>window.print()}><Printer size={15}/>Imprimir</button></div>}</td></tr>)}</tbody></table></div>}
-   <div className="cash-pagination"><span>Mostrando {filtered.length?(current-1)*perPage+1:0} a {Math.min(current*perPage,filtered.length)} de {filtered.length} movimentações</span><div><button disabled={current===1} onClick={()=>setPage(current-1)}><ChevronLeft size={16}/></button><b>{current}</b><span>de {pages}</span><button disabled={current===pages} onClick={()=>setPage(current+1)}><ChevronRight size={16}/></button></div><label><select value={perPage} onChange={e=>{setPerPage(Number(e.target.value));setPage(1)}}><option value="10">10 por página</option><option value="25">25 por página</option><option value="50">50 por página</option></select><ChevronDown size={14}/></label></div>
-   {active&&<div className="cash-fab-wrap">{fab&&<div className="cash-fab-menu">{['Entrada','Saída','Sangria','Suprimento'].map(type=><button key={type} onClick={()=>add(type)}>{type==='Suprimento'?'Novo':'Nova'} {type}</button>)}</div>}<button className="cash-fab" onClick={()=>setFab(!fab)} aria-label="Nova movimentação"><Plus size={27}/></button></div>}
-  </section>
-  {modal?.kind==='move'&&<Modal title={`Nova ${modal.type}`} onClose={()=>setModal(null)}><p className="modal-subtitle">Registre a movimentação no caixa aberto.</p><div className="form-grid cash-modal-form"><label>Valor<input autoFocus type="number" step="0.01" value={modal.value} onChange={e=>setModal({...modal,value:e.target.value,error:''})} placeholder="R$ 0,00"/></label><label>Forma de pagamento<select value={modal.method} onChange={e=>setModal({...modal,method:e.target.value})}>{['Dinheiro','PIX','Débito','Crédito'].map(x=><option key={x}>{x}</option>)}</select></label><label className="span2">Descrição<input value={modal.description} onChange={e=>setModal({...modal,description:e.target.value})} placeholder="Descreva a movimentação"/></label>{modal.error&&<div className="error-box span2">{modal.error}</div>}<div className="modal-actions span2"><button className="secondary-button" onClick={()=>setModal(null)}>Cancelar</button><button className="primary-button" disabled={saving} onClick={saveMove}>{saving?'Salvando...':'Salvar movimentação'}</button></div></div></Modal>}
-  {modal?.kind==='open'&&<Modal title="Abrir caixa" onClose={()=>setModal(null)}><p className="modal-subtitle">Informe o valor disponível no início do turno.</p><div className="form-grid one cash-modal-form"><label>Saldo inicial<input autoFocus type="number" min="0" step="0.01" value={modal.value} onChange={e=>setModal({...modal,value:e.target.value,error:''})}/></label>{modal.error&&<div className="error-box">{modal.error}</div>}<div className="modal-actions"><button className="secondary-button" onClick={()=>setModal(null)}>Cancelar</button><button className="primary-button" onClick={openCash}>Abrir caixa</button></div></div></Modal>}
-  {modal?.kind==='close'&&<Modal title="Fechar caixa" onClose={()=>setModal(null)}><p className="modal-subtitle">Confira os valores antes de confirmar o fechamento.</p><div className="cash-close-summary"><span>Saldo inicial <b>{money(active.opening)}</b></span><span>Entradas <b className="positive">{money(entries)}</b></span><span>Saídas <b className="negative">{money(exits)}</b></span><span>Sangrias <b>{money(sangrias)}</b></span><span>Suprimentos <b>{money(suprimentos)}</b></span><span className="total">Saldo esperado <b>{money(balance)}</b></span></div><div className="form-grid one cash-modal-form"><label>Saldo contado<input autoFocus type="number" min="0" step="0.01" value={modal.declared} onChange={e=>setModal({...modal,declared:e.target.value,error:''})}/></label><div className="cash-difference">Diferença <b className={Number(modal.declared)-balance<0?'negative':'positive'}>{money((Number(modal.declared)||0)-balance)}</b></div>{modal.error&&<div className="error-box">{modal.error}</div>}<div className="modal-actions"><button className="secondary-button" onClick={()=>setModal(null)}>Cancelar</button><button className="danger-button" onClick={closeCash}>Confirmar fechamento</button></div></div></Modal>}
-  {modal?.kind==='detail'&&<Modal title="Detalhes da movimentação" onClose={()=>setModal(null)}><div className="cash-close-summary"><span>Data <b>{dateBR(modal.move.date)}</b></span><span>Tipo <b>{modal.move.type}</b></span><span>Descrição <b>{modal.move.description}</b></span><span>Forma de pagamento <b>{modal.move.method||'Não informada'}</b></span><span className="total">Valor <b>{money(modal.move.value)}</b></span></div><div className="modal-actions"><button className="secondary-button" onClick={()=>window.print()}><Printer size={16}/>Imprimir</button><button className="primary-button" onClick={()=>setModal(null)}>Concluir</button></div></Modal>}
- </div>
+function CashModern({ state, setState, audit }: any) {
+  const active = state.cashSessions.find(
+    (c: CashSession) => c.status === "Aberto",
+  );
+  const moves: CashMove[] = active
+    ? state.cashMoves.filter((m: CashMove) => m.cashId === active.id)
+    : [];
+  const isDebit = (m: CashMove) =>
+    ["Saída", "Sangria", "Despesa"].includes(m.type);
+  const entries = moves
+    .filter((m) => !isDebit(m))
+    .reduce((a, m) => a + m.value, 0);
+  const exits = moves.filter(isDebit).reduce((a, m) => a + m.value, 0);
+  const sangrias = moves
+    .filter((m) => m.type === "Sangria")
+    .reduce((a, m) => a + m.value, 0);
+  const suprimentos = moves
+    .filter((m) => m.type === "Suprimento")
+    .reduce((a, m) => a + m.value, 0);
+  const salesAmount = moves
+    .filter((m) => m.type === "Venda")
+    .reduce((a, m) => a + m.value, 0);
+  const otherEntries = moves
+    .filter((m) => ["Entrada", "Recebimento"].includes(m.type))
+    .reduce((a, m) => a + m.value, 0);
+  const closedSessions: CashSession[] = state.cashSessions.filter(
+    (c: CashSession) => c.status === "Fechado",
+  );
+  const balance = active ? active.opening + entries - exits : 0;
+  const [modal, setModal] = useState<any>(null);
+  const [tab, setTab] = useState("Movimentações");
+  const [query, setQuery] = useState("");
+  const [date, setDate] = useState("");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [actions, setActions] = useState<string | null>(null);
+  const [fab, setFab] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const tabMap: Record<string, string[] | undefined> = {
+    Entradas: ["Entrada", "Venda", "Recebimento"],
+    Saídas: ["Saída", "Despesa"],
+    Sangrias: ["Sangria"],
+    Suprimentos: ["Suprimento"],
+  };
+  const filtered = useMemo(
+    () =>
+      moves.filter(
+        (m) =>
+          (!tabMap[tab] || tabMap[tab]!.includes(m.type)) &&
+          (!date || m.date.slice(0, 10) === date) &&
+          (!query ||
+            `${m.type} ${m.description} ${m.method || ""}`
+              .toLowerCase()
+              .includes(query.toLowerCase())),
+      ),
+    [moves, tab, date, query],
+  );
+  const pages = Math.max(1, Math.ceil(filtered.length / perPage));
+  const current = Math.min(page, pages);
+  const rows = filtered.slice((current - 1) * perPage, current * perPage);
+  function add(type: string) {
+    if (!active) return;
+    setFab(false);
+    setModal({
+      kind: "move",
+      type,
+      value: "",
+      description: "",
+      method: "Dinheiro",
+      error: "",
+    });
+  }
+  function saveMove() {
+    const value = Number(modal.value);
+    if (!value || value <= 0) {
+      setModal({ ...modal, error: "Informe um valor maior que zero." });
+      return;
+    }
+    setSaving(true);
+    const m: CashMove = {
+      id: uid(),
+      cashId: active.id,
+      date: nowIso(),
+      type: modal.type,
+      value,
+      method: modal.method,
+      description: modal.description.trim() || modal.type,
+    };
+    setState((s: State) => ({ ...s, cashMoves: [m, ...s.cashMoves] }));
+    audit("Caixa", modal.type, `${m.description}: ${money(value)}`);
+    setSaving(false);
+    setModal(null);
+  }
+  function openCash() {
+    const opening = Number(modal.value);
+    if (Number.isNaN(opening) || opening < 0) {
+      setModal({ ...modal, error: "Informe um saldo inicial válido." });
+      return;
+    }
+    const c: CashSession = {
+      id: uid(),
+      openedAt: nowIso(),
+      opening,
+      status: "Aberto",
+      operator: "Administrador",
+    };
+    setState((s: State) => ({ ...s, cashSessions: [c, ...s.cashSessions] }));
+    audit("Caixa", "Abertura", `Saldo inicial ${money(opening)}`);
+    setModal(null);
+  }
+  async function closeCash() {
+    const declared = Number(modal.declared);
+    if (Number.isNaN(declared) || declared < 0) {
+      setModal({ ...modal, error: "Informe o saldo contado." });
+      return;
+    }
+    const closedAt = nowIso();
+    const closedSession: CashSession = {
+      ...active,
+      status: "Fechado",
+      closedAt,
+      closingDeclared: declared,
+    };
+    setState((s: State) => ({
+      ...s,
+      cashSessions: s.cashSessions.map((c: CashSession) =>
+        c.id === active.id ? closedSession : c,
+      ),
+    }));
+    audit(
+      "Caixa",
+      "Fechamento",
+      `Declarado ${money(declared)} | Esperado ${money(balance)}`,
+    );
+    setModal(null);
+    await generateCashReport(state, closedSession, true);
+  }
+  function exportCsv() {
+    const csv = [
+      "Data;Tipo;Descrição;Categoria;Valor;Forma de pagamento",
+      ...filtered.map((m) =>
+        [
+          dateBR(m.date),
+          m.type,
+          m.description,
+          m.type,
+          m.value.toFixed(2),
+          m.method || "",
+        ].join(";"),
+      ),
+    ].join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(
+      new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }),
+    );
+    a.download = `caixa-${dayISO()}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  const tabs = [
+    ["Movimentações", RefreshCw],
+    ["Entradas", ArrowDownToLine],
+    ["Saídas", ArrowUpFromLine],
+    ["Sangrias", Banknote],
+    ["Suprimentos", CirclePlus],
+  ] as const;
+  return (
+    <div className="cash-page">
+      <Header
+        eyebrow="FINANCEIRO"
+        title="Controle de Caixa"
+        subtitle="Acompanhe entradas, saídas e o saldo do caixa em tempo real."
+        action={
+          <div className="cash-head-actions">
+            <button className="cash-export" onClick={exportCsv}>
+              <Download size={17} />
+              Exportar
+            </button>
+            {active ? (
+              <button
+                className="cash-close"
+                onClick={() =>
+                  setModal({
+                    kind: "close",
+                    declared: balance.toFixed(2),
+                    error: "",
+                  })
+                }
+              >
+                <LockKeyhole size={17} />
+                Fechar Caixa
+              </button>
+            ) : (
+              <button
+                className="cash-close"
+                onClick={() =>
+                  setModal({ kind: "open", value: "0", error: "" })
+                }
+              >
+                <Plus size={17} />
+                Abrir Caixa
+              </button>
+            )}
+          </div>
+        }
+      />
+      <section className="cash-stats">
+        <div className="cash-stat green">
+          <div className="cash-stat-icon">
+            <Banknote />
+          </div>
+          <div>
+            <span>Saldo inicial</span>
+            <strong>{money(active?.opening || 0)}</strong>
+            <small>
+              {active
+                ? `Aberto às ${new Date(active.openedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                : "Caixa fechado"}
+            </small>
+          </div>
+          <i>⌁</i>
+        </div>
+        <div className="cash-stat blue">
+          <div className="cash-stat-icon">
+            <ArrowDownToLine />
+          </div>
+          <div>
+            <span>Entradas</span>
+            <strong>{money(entries)}</strong>
+            <small>Movimentações positivas</small>
+          </div>
+          <i>⌁</i>
+        </div>
+        <div className="cash-stat orange">
+          <div className="cash-stat-icon">
+            <ArrowUpFromLine />
+          </div>
+          <div>
+            <span>Saídas</span>
+            <strong>{money(exits)}</strong>
+            <small>Movimentações negativas</small>
+          </div>
+          <i>⌁</i>
+        </div>
+        <div className="cash-stat purple">
+          <div className="cash-stat-icon">
+            <WalletCards />
+          </div>
+          <div>
+            <span>Saldo esperado</span>
+            <strong>{money(balance)}</strong>
+            <small>Valor calculado</small>
+          </div>
+          <i>⌁</i>
+        </div>
+      </section>
+      <nav className="cash-tabs" aria-label="Filtros de movimentações">
+        {tabs.map(([label, Icon]) => (
+          <button
+            key={label}
+            className={tab === label ? "active" : ""}
+            onClick={() => {
+              setTab(label);
+              setPage(1);
+            }}
+          >
+            <Icon size={16} />
+            {label}
+          </button>
+        ))}
+      </nav>
+      <section className="cash-panel">
+        <div className="cash-panel-head">
+          <div>
+            <h2>Movimentações do caixa</h2>
+            <p>Consulte e acompanhe as operações deste turno.</p>
+          </div>
+        </div>
+        <div className="cash-panel-tools">
+          <div className="cash-primary-actions">
+            <button
+              className="entry"
+              disabled={!active}
+              title={!active ? "Abra o caixa para registrar uma entrada" : ""}
+              onClick={() => add("Entrada")}
+            >
+              <ArrowDownToLine size={17} />
+              Nova Entrada
+            </button>
+            <button
+              className="exit"
+              disabled={!active}
+              title={!active ? "Abra o caixa para registrar uma saída" : ""}
+              onClick={() => add("Saída")}
+            >
+              <ArrowUpFromLine size={17} />
+              Nova Saída
+            </button>
+            <button
+              className="withdrawal"
+              disabled={!active}
+              title={!active ? "Abra o caixa para registrar uma sangria" : ""}
+              onClick={() => add("Sangria")}
+            >
+              <Banknote size={17} />
+              Nova Sangria
+            </button>
+            <button
+              className="supply"
+              disabled={!active}
+              title={!active ? "Abra o caixa para registrar um suprimento" : ""}
+              onClick={() => add("Suprimento")}
+            >
+              <CirclePlus size={17} />
+              Novo Suprimento
+            </button>
+          </div>
+          <div className="cash-filters">
+            <div className="cash-search">
+              <Search size={16} />
+              <input
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Buscar movimentação..."
+              />
+            </div>
+            <label className="cash-date">
+              <CalendarDays size={16} />
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </label>
+            <button className="cash-filter-button">
+              <SlidersHorizontal size={16} />
+              Filtros
+            </button>
+          </div>
+        </div>
+        {filtered.length === 0 ? (
+          <Empty
+            text={
+              active
+                ? "Nenhuma movimentação encontrada."
+                : "Abra o caixa para registrar movimentações."
+            }
+          />
+        ) : (
+          <div className="table-wrap cash-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data / Hora</th>
+                  <th>Tipo</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Valor</th>
+                  <th>Forma de pagamento</th>
+                  <th>Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((m) => (
+                  <tr key={m.id}>
+                    <td>{dateBR(m.date)}</td>
+                    <td>
+                      <Status
+                        tone={
+                          isDebit(m)
+                            ? "red"
+                            : m.type === "Suprimento"
+                              ? "blue"
+                              : "green"
+                        }
+                      >
+                        {m.type}
+                      </Status>
+                    </td>
+                    <td>{m.description}</td>
+                    <td>{m.type}</td>
+                    <td className={isDebit(m) ? "negative" : "positive"}>
+                      {isDebit(m) ? "-" : "+"}
+                      {money(m.value)}
+                    </td>
+                    <td>{m.method || "—"}</td>
+                    <td className="cash-action-cell">
+                      <button
+                        className="cash-row-action"
+                        aria-label="Ações"
+                        onClick={() =>
+                          setActions(actions === m.id ? null : m.id)
+                        }
+                      >
+                        <MoreHorizontal size={18} />
+                      </button>
+                      {actions === m.id && (
+                        <div className="cash-action-menu">
+                          <button
+                            onClick={() => {
+                              setModal({ kind: "detail", move: m });
+                              setActions(null);
+                            }}
+                          >
+                            <Eye size={15} />
+                            Ver detalhes
+                          </button>
+                          <button onClick={() => window.print()}>
+                            <Printer size={15} />
+                            Imprimir
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="cash-pagination">
+          <span>
+            Mostrando {filtered.length ? (current - 1) * perPage + 1 : 0} a{" "}
+            {Math.min(current * perPage, filtered.length)} de {filtered.length}{" "}
+            movimentações
+          </span>
+          <div>
+            <button
+              disabled={current === 1}
+              onClick={() => setPage(current - 1)}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <b>{current}</b>
+            <span>de {pages}</span>
+            <button
+              disabled={current === pages}
+              onClick={() => setPage(current + 1)}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+          <label>
+            <select
+              value={perPage}
+              onChange={(e) => {
+                setPerPage(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              <option value="10">10 por página</option>
+              <option value="25">25 por página</option>
+              <option value="50">50 por página</option>
+            </select>
+            <ChevronDown size={14} />
+          </label>
+        </div>
+        {active && (
+          <div className="cash-fab-wrap">
+            {fab && (
+              <div className="cash-fab-menu">
+                {["Entrada", "Saída", "Sangria", "Suprimento"].map((type) => (
+                  <button key={type} onClick={() => add(type)}>
+                    {type === "Suprimento" ? "Novo" : "Nova"} {type}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              className="cash-fab"
+              onClick={() => setFab(!fab)}
+              aria-label="Nova movimentação"
+            >
+              <Plus size={27} />
+            </button>
+          </div>
+        )}
+      </section>
+      {closedSessions.length > 0 && (
+        <section className="panel section-block cash-history">
+          <div className="panel-head">
+            <div><span className="eyebrow">HISTÓRICO</span><h2>Caixas fechados</h2></div>
+          </div>
+          <div className="table-wrap"><table><thead><tr><th>Data</th><th>Abertura</th><th>Fechamento</th><th>Operador</th><th>Saldo inicial</th><th>Vendas</th><th>Saldo final</th><th>Ações</th></tr></thead><tbody>
+            {closedSessions.map((session) => {const sessionMoves:CashMove[]=state.cashMoves.filter((m:CashMove)=>m.cashId===session.id);const sessionSales=sessionMoves.filter(m=>m.type==='Venda').reduce((a,m)=>a+m.value,0);const final=session.opening+sessionMoves.reduce((a,m)=>a+(isDebit(m)?-m.value:m.value),0);return <tr key={session.id}><td>{dateBR(session.closedAt!)}</td><td>{new Date(session.openedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</td><td>{new Date(session.closedAt!).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</td><td>{session.operator}</td><td>{money(session.opening)}</td><td className="positive">{money(sessionSales)}</td><td>{money(final)}</td><td><div className="button-row"><button className="small-action" onClick={()=>generateCashReport(state,session,true)}>Ver</button><button className="small-action" onClick={()=>generateCashReport(state,session)}>Gerar PDF</button></div></td></tr>})}
+          </tbody></table></div>
+        </section>
+      )}
+      {modal?.kind === "move" && (
+        <Modal title={`Nova ${modal.type}`} onClose={() => setModal(null)}>
+          <p className="modal-subtitle">
+            Registre a movimentação no caixa aberto.
+          </p>
+          <div className="form-grid cash-modal-form">
+            <label>
+              Valor
+              <input
+                autoFocus
+                type="number"
+                step="0.01"
+                value={modal.value}
+                onChange={(e) =>
+                  setModal({ ...modal, value: e.target.value, error: "" })
+                }
+                placeholder="R$ 0,00"
+              />
+            </label>
+            <label>
+              Forma de pagamento
+              <select
+                value={modal.method}
+                onChange={(e) => setModal({ ...modal, method: e.target.value })}
+              >
+                {["Dinheiro", "PIX", "Débito", "Crédito"].map((x) => (
+                  <option key={x}>{x}</option>
+                ))}
+              </select>
+            </label>
+            <label className="span2">
+              Descrição
+              <input
+                value={modal.description}
+                onChange={(e) =>
+                  setModal({ ...modal, description: e.target.value })
+                }
+                placeholder="Descreva a movimentação"
+              />
+            </label>
+            {modal.error && (
+              <div className="error-box span2">{modal.error}</div>
+            )}
+            <div className="modal-actions span2">
+              <button
+                className="secondary-button"
+                onClick={() => setModal(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="primary-button"
+                disabled={saving}
+                onClick={saveMove}
+              >
+                {saving ? "Salvando..." : "Salvar movimentação"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      {modal?.kind === "open" && (
+        <Modal title="Abrir caixa" onClose={() => setModal(null)}>
+          <p className="modal-subtitle">
+            Informe o valor disponível no início do turno.
+          </p>
+          <div className="form-grid one cash-modal-form">
+            <label>
+              Saldo inicial
+              <input
+                autoFocus
+                type="number"
+                min="0"
+                step="0.01"
+                value={modal.value}
+                onChange={(e) =>
+                  setModal({ ...modal, value: e.target.value, error: "" })
+                }
+              />
+            </label>
+            {modal.error && <div className="error-box">{modal.error}</div>}
+            <div className="modal-actions">
+              <button
+                className="secondary-button"
+                onClick={() => setModal(null)}
+              >
+                Cancelar
+              </button>
+              <button className="primary-button" onClick={openCash}>
+                Abrir caixa
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      {modal?.kind === "close" && (
+        <Modal title="Fechar caixa" onClose={() => setModal(null)}>
+          <p className="modal-subtitle">
+            Confira os valores antes de confirmar o fechamento.
+          </p>
+          <div className="cash-close-summary">
+            <span>
+              Saldo inicial <b>{money(active.opening)}</b>
+            </span>
+            <span>
+              Entradas <b className="positive">{money(otherEntries)}</b>
+            </span>
+            <span>
+              Vendas <b className="positive">{money(salesAmount)}</b>
+            </span>
+            <span>
+              Saídas <b className="negative">{money(exits)}</b>
+            </span>
+            <span>
+              Sangrias <b>{money(sangrias)}</b>
+            </span>
+            <span>
+              Suprimentos <b>{money(suprimentos)}</b>
+            </span>
+            <span className="total">
+              Saldo esperado <b>{money(balance)}</b>
+            </span>
+          </div>
+          <div className="form-grid one cash-modal-form">
+            <label>
+              Saldo contado
+              <input
+                autoFocus
+                type="number"
+                min="0"
+                step="0.01"
+                value={modal.declared}
+                onChange={(e) =>
+                  setModal({ ...modal, declared: e.target.value, error: "" })
+                }
+              />
+            </label>
+            <div className="cash-difference">
+              Diferença{" "}
+              <b
+                className={
+                  Number(modal.declared) - balance < 0 ? "negative" : "positive"
+                }
+              >
+                {money((Number(modal.declared) || 0) - balance)}
+              </b>
+            </div>
+            {modal.error && <div className="error-box">{modal.error}</div>}
+            <div className="modal-actions">
+              <button
+                className="secondary-button"
+                onClick={() => setModal(null)}
+              >
+                Cancelar
+              </button>
+              <button className="danger-button" onClick={closeCash}>
+                Confirmar e fechar caixa
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      {modal?.kind === "detail" && (
+        <Modal title="Detalhes da movimentação" onClose={() => setModal(null)}>
+          <div className="cash-close-summary">
+            <span>
+              Data <b>{dateBR(modal.move.date)}</b>
+            </span>
+            <span>
+              Tipo <b>{modal.move.type}</b>
+            </span>
+            <span>
+              Descrição <b>{modal.move.description}</b>
+            </span>
+            <span>
+              Forma de pagamento <b>{modal.move.method || "Não informada"}</b>
+            </span>
+            <span className="total">
+              Valor <b>{money(modal.move.value)}</b>
+            </span>
+          </div>
+          <div className="modal-actions">
+            <button className="secondary-button" onClick={() => window.print()}>
+              <Printer size={16} />
+              Imprimir
+            </button>
+            <button className="primary-button" onClick={() => setModal(null)}>
+              Concluir
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
 }
 
-function Cash({state,setState,audit}:any){const active=state.cashSessions.find((c:CashSession)=>c.status==='Aberto');const moves=active?state.cashMoves.filter((m:CashMove)=>m.cashId===active.id):[];const balance=active?active.opening+moves.reduce((a:number,m:CashMove)=>a+(['Saída','Sangria','Despesa'].includes(m.type)?-m.value:m.value),0):0;const [modal,setModal]=useState<any>(null);function add(type:string){if(!active)return alert('Abra um caixa.');setModal({type,value:'',description:''})}function saveMove(){const v=Number(modal.value);if(!v)return;const m:CashMove={id:uid(),cashId:active.id,date:nowIso(),type:modal.type,value:v,description:modal.description||modal.type};setState((s:State)=>({...s,cashMoves:[m,...s.cashMoves]}));audit('Caixa',modal.type,`${modal.description||modal.type}: ${money(v)}`);setModal(null)}function close(){if(!active)return;const declared=Number(prompt(`Saldo esperado: ${money(balance)}\nInforme o valor contado:`));if(Number.isNaN(declared))return;setState((s:State)=>({...s,cashSessions:s.cashSessions.map((c:CashSession)=>c.id===active.id?{...c,status:'Fechado',closedAt:nowIso(),closingDeclared:declared}:c)}));audit('Caixa','Fechamento',`Declarado ${money(declared)} | Esperado ${money(balance)}`)}function open(){const opening=Number(prompt('Saldo inicial do caixa:','0'));if(Number.isNaN(opening))return;const c:CashSession={id:uid(),openedAt:nowIso(),opening,status:'Aberto',operator:'Administrador'};setState((s:State)=>({...s,cashSessions:[c,...s.cashSessions]}));audit('Caixa','Abertura',`Saldo inicial ${money(opening)}`)}return <><Header eyebrow="FINANCEIRO" title="Controle de Caixa" subtitle="Abertura, entradas, saídas, sangrias, suprimentos e fechamento." action={active?<button className="danger-button" onClick={close}>Fechar Caixa</button>:<button className="primary-button compact" onClick={open}><Plus size={17}/>Abrir Caixa</button>}/><section className="stats-grid"><Card title="Saldo inicial" value={active?money(active.opening):'R$ 0,00'} sub={active?dateBR(active.openedAt):'Caixa fechado'} icon={Banknote}/><Card title="Entradas" value={money(moves.filter((m:CashMove)=>!['Saída','Sangria','Despesa'].includes(m.type)).reduce((a:number,b:CashMove)=>a+b.value,0))} sub="Movimentações positivas" icon={ArrowDownToLine} tone="blue"/><Card title="Saídas" value={money(moves.filter((m:CashMove)=>['Saída','Sangria','Despesa'].includes(m.type)).reduce((a:number,b:CashMove)=>a+b.value,0))} sub="Movimentações negativas" icon={ArrowUpFromLine} tone="orange"/><Card title="Saldo esperado" value={money(balance)} sub="Valor calculado" icon={WalletCards}/></section>{active&&<div className="quick-grid"><button onClick={()=>add('Entrada')}><div className="quick-icon"><ArrowDownToLine/></div><div><b>Entrada</b><span>Receita avulsa</span></div></button><button onClick={()=>add('Saída')}><div className="quick-icon"><ArrowUpFromLine/></div><div><b>Saída</b><span>Retirada avulsa</span></div></button><button onClick={()=>add('Sangria')}><div className="quick-icon"><Banknote/></div><div><b>Sangria</b><span>Retirar numerário</span></div></button><button onClick={()=>add('Suprimento')}><div className="quick-icon"><Plus/></div><div><b>Suprimento</b><span>Adicionar numerário</span></div></button></div>}<div className="panel"><h2>Movimentações do caixa</h2>{moves.length===0?<Empty text="Nenhuma movimentação neste caixa."/>:<div className="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th></tr></thead><tbody>{moves.map((m:CashMove)=><tr key={m.id}><td>{dateBR(m.date)}</td><td><Status tone={['Saída','Sangria','Despesa'].includes(m.type)?'orange':'green'}>{m.type}</Status></td><td>{m.description}</td><td className={['Saída','Sangria','Despesa'].includes(m.type)?'negative':'positive'}>{money(m.value)}</td></tr>)}</tbody></table></div>}</div>{modal&&<Modal title={`Nova ${modal.type}`} onClose={()=>setModal(null)}><div className="form-grid"><label>Valor<input type="number" step="0.01" value={modal.value} onChange={e=>setModal({...modal,value:e.target.value})}/></label><label>Descrição<input value={modal.description} onChange={e=>setModal({...modal,description:e.target.value})}/></label><button className="primary-button span2" onClick={saveMove}>Salvar</button></div></Modal>}</>}
+function Cash({ state, setState, audit }: any) {
+  const active = state.cashSessions.find(
+    (c: CashSession) => c.status === "Aberto",
+  );
+  const moves = active
+    ? state.cashMoves.filter((m: CashMove) => m.cashId === active.id)
+    : [];
+  const balance = active
+    ? active.opening +
+      moves.reduce(
+        (a: number, m: CashMove) =>
+          a +
+          (["Saída", "Sangria", "Despesa"].includes(m.type)
+            ? -m.value
+            : m.value),
+        0,
+      )
+    : 0;
+  const [modal, setModal] = useState<any>(null);
+  function add(type: string) {
+    if (!active) return alert("Abra um caixa.");
+    setModal({ type, value: "", description: "" });
+  }
+  function saveMove() {
+    const v = Number(modal.value);
+    if (!v) return;
+    const m: CashMove = {
+      id: uid(),
+      cashId: active.id,
+      date: nowIso(),
+      type: modal.type,
+      value: v,
+      description: modal.description || modal.type,
+    };
+    setState((s: State) => ({ ...s, cashMoves: [m, ...s.cashMoves] }));
+    audit(
+      "Caixa",
+      modal.type,
+      `${modal.description || modal.type}: ${money(v)}`,
+    );
+    setModal(null);
+  }
+  function close() {
+    if (!active) return;
+    const declared = Number(
+      prompt(`Saldo esperado: ${money(balance)}\nInforme o valor contado:`),
+    );
+    if (Number.isNaN(declared)) return;
+    setState((s: State) => ({
+      ...s,
+      cashSessions: s.cashSessions.map((c: CashSession) =>
+        c.id === active.id
+          ? {
+              ...c,
+              status: "Fechado",
+              closedAt: nowIso(),
+              closingDeclared: declared,
+            }
+          : c,
+      ),
+    }));
+    audit(
+      "Caixa",
+      "Fechamento",
+      `Declarado ${money(declared)} | Esperado ${money(balance)}`,
+    );
+  }
+  function open() {
+    const opening = Number(prompt("Saldo inicial do caixa:", "0"));
+    if (Number.isNaN(opening)) return;
+    const c: CashSession = {
+      id: uid(),
+      openedAt: nowIso(),
+      opening,
+      status: "Aberto",
+      operator: "Administrador",
+    };
+    setState((s: State) => ({ ...s, cashSessions: [c, ...s.cashSessions] }));
+    audit("Caixa", "Abertura", `Saldo inicial ${money(opening)}`);
+  }
+  return (
+    <>
+      <Header
+        eyebrow="FINANCEIRO"
+        title="Controle de Caixa"
+        subtitle="Abertura, entradas, saídas, sangrias, suprimentos e fechamento."
+        action={
+          active ? (
+            <button className="danger-button" onClick={close}>
+              Fechar Caixa
+            </button>
+          ) : (
+            <button className="primary-button compact" onClick={open}>
+              <Plus size={17} />
+              Abrir Caixa
+            </button>
+          )
+        }
+      />
+      <section className="stats-grid">
+        <Card
+          title="Saldo inicial"
+          value={active ? money(active.opening) : "R$ 0,00"}
+          sub={active ? dateBR(active.openedAt) : "Caixa fechado"}
+          icon={Banknote}
+        />
+        <Card
+          title="Entradas"
+          value={money(
+            moves
+              .filter(
+                (m: CashMove) =>
+                  !["Saída", "Sangria", "Despesa"].includes(m.type),
+              )
+              .reduce((a: number, b: CashMove) => a + b.value, 0),
+          )}
+          sub="Movimentações positivas"
+          icon={ArrowDownToLine}
+          tone="blue"
+        />
+        <Card
+          title="Saídas"
+          value={money(
+            moves
+              .filter((m: CashMove) =>
+                ["Saída", "Sangria", "Despesa"].includes(m.type),
+              )
+              .reduce((a: number, b: CashMove) => a + b.value, 0),
+          )}
+          sub="Movimentações negativas"
+          icon={ArrowUpFromLine}
+          tone="orange"
+        />
+        <Card
+          title="Saldo esperado"
+          value={money(balance)}
+          sub="Valor calculado"
+          icon={WalletCards}
+        />
+      </section>
+      {active && (
+        <div className="quick-grid">
+          <button onClick={() => add("Entrada")}>
+            <div className="quick-icon">
+              <ArrowDownToLine />
+            </div>
+            <div>
+              <b>Entrada</b>
+              <span>Receita avulsa</span>
+            </div>
+          </button>
+          <button onClick={() => add("Saída")}>
+            <div className="quick-icon">
+              <ArrowUpFromLine />
+            </div>
+            <div>
+              <b>Saída</b>
+              <span>Retirada avulsa</span>
+            </div>
+          </button>
+          <button onClick={() => add("Sangria")}>
+            <div className="quick-icon">
+              <Banknote />
+            </div>
+            <div>
+              <b>Sangria</b>
+              <span>Retirar numerário</span>
+            </div>
+          </button>
+          <button onClick={() => add("Suprimento")}>
+            <div className="quick-icon">
+              <Plus />
+            </div>
+            <div>
+              <b>Suprimento</b>
+              <span>Adicionar numerário</span>
+            </div>
+          </button>
+        </div>
+      )}
+      <div className="panel">
+        <h2>Movimentações do caixa</h2>
+        {moves.length === 0 ? (
+          <Empty text="Nenhuma movimentação neste caixa." />
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Tipo</th>
+                  <th>Descrição</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {moves.map((m: CashMove) => (
+                  <tr key={m.id}>
+                    <td>{dateBR(m.date)}</td>
+                    <td>
+                      <Status
+                        tone={
+                          ["Saída", "Sangria", "Despesa"].includes(m.type)
+                            ? "orange"
+                            : "green"
+                        }
+                      >
+                        {m.type}
+                      </Status>
+                    </td>
+                    <td>{m.description}</td>
+                    <td
+                      className={
+                        ["Saída", "Sangria", "Despesa"].includes(m.type)
+                          ? "negative"
+                          : "positive"
+                      }
+                    >
+                      {money(m.value)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      {modal && (
+        <Modal title={`Nova ${modal.type}`} onClose={() => setModal(null)}>
+          <div className="form-grid">
+            <label>
+              Valor
+              <input
+                type="number"
+                step="0.01"
+                value={modal.value}
+                onChange={(e) => setModal({ ...modal, value: e.target.value })}
+              />
+            </label>
+            <label>
+              Descrição
+              <input
+                value={modal.description}
+                onChange={(e) =>
+                  setModal({ ...modal, description: e.target.value })
+                }
+              />
+            </label>
+            <button className="primary-button span2" onClick={saveMove}>
+              Salvar
+            </button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
 
 function Sales({ state, setState, audit }: any) {
   const [search, setSearch] = useState("");
