@@ -1,14 +1,7 @@
-import { useState } from 'react';
-import {
-  BarChart3,
-  Droplets,
-  Eye,
-  EyeOff,
-  LockKeyhole,
-  Mail,
-  Users,
-  WalletCards,
-} from 'lucide-react';
+import { useState } from "react";
+import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
+
+import { supabase } from "../lib/supabase";
 
 type Props = {
   onLogin: () => void;
@@ -16,12 +9,94 @@ type Props = {
 
 export default function LoginPage({ onLogin }: Props) {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('admin@postogestao.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (email && password) onLogin();
+
+    setError("");
+
+    const emailLimpo = email.trim();
+
+    if (!emailLimpo || !password) {
+      setError("Informe seu e-mail e senha.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const { data, error: loginError } =
+        await supabase.auth.signInWithPassword({
+          email: emailLimpo,
+          password,
+        });
+
+      if (loginError) {
+        console.error(loginError);
+        setError("E-mail ou senha inválidos.");
+        return;
+      }
+
+      if (!data.user) {
+        setError("Não foi possível identificar o usuário.");
+        return;
+      }
+
+      const { data: perfil, error: perfilError } = await supabase
+        .from("perfis")
+        .select(
+          `
+          id,
+          nome,
+          email,
+          perfil,
+          ativo,
+          empresa_id
+        `,
+        )
+        .eq("id", data.user.id)
+        .single();
+
+      if (perfilError || !perfil) {
+        console.error(perfilError);
+
+        await supabase.auth.signOut();
+
+        setError("Seu login existe, mas o perfil não pôde ser carregado.");
+
+        return;
+      }
+
+      if (!perfil.ativo) {
+        await supabase.auth.signOut();
+
+        setError("Este usuário está desativado. Procure o administrador.");
+
+        return;
+      }
+
+      const perfisPermitidos = ["administrador", "gerente", "frentista"];
+
+      if (!perfisPermitidos.includes(perfil.perfil)) {
+        await supabase.auth.signOut();
+
+        setError("Seu usuário não possui um perfil de acesso válido.");
+
+        return;
+      }
+
+      onLogin();
+    } catch (err) {
+      console.error(err);
+
+      setError("Não foi possível entrar no sistema. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -29,24 +104,19 @@ export default function LoginPage({ onLogin }: Props) {
       <section className="login-brand-panel">
         <div className="login-brand-content">
           <img
-            className="login-logo-large"
             src="/logo-posto.png"
             alt="Posto dos Cerrados"
+            className="login-logo"
           />
 
           <h1>Posto dos Cerrados</h1>
+
           <div className="login-title-line" />
+
           <p>
             Gestão inteligente de caixa, vendas, estoque em litros, clientes e
             contas a receber.
           </p>
-
-          <div className="login-feature-icons" aria-hidden="true">
-            <div className="login-feature-item"><Droplets size={28} /></div>
-            <div className="login-feature-item"><WalletCards size={28} /></div>
-            <div className="login-feature-item"><Users size={28} /></div>
-            <div className="login-feature-item"><BarChart3 size={28} /></div>
-          </div>
         </div>
       </section>
 
@@ -59,6 +129,7 @@ export default function LoginPage({ onLogin }: Props) {
 
           <div className="login-title">
             <h2>Entrar</h2>
+
             <p>Informe seus dados para acessar o painel.</p>
           </div>
 
@@ -66,11 +137,14 @@ export default function LoginPage({ onLogin }: Props) {
             E-mail
             <div className="input-wrap">
               <Mail size={18} />
+
               <input
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 type="email"
                 placeholder="Digite seu e-mail"
+                autoComplete="email"
+                disabled={loading}
               />
             </div>
           </label>
@@ -79,17 +153,22 @@ export default function LoginPage({ onLogin }: Props) {
             Senha
             <div className="input-wrap">
               <LockKeyhole size={18} />
+
               <input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 placeholder="Digite sua senha"
+                autoComplete="current-password"
+                disabled={loading}
               />
+
               <button
                 className="icon-button"
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label="Mostrar senha"
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                disabled={loading}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -101,15 +180,30 @@ export default function LoginPage({ onLogin }: Props) {
               <input type="checkbox" defaultChecked />
               Lembrar meu acesso
             </label>
-            <button className="text-button" type="button">Esqueci minha senha</button>
+
+            <button className="text-button" type="button">
+              Esqueci minha senha
+            </button>
           </div>
 
-          <button className="primary-button" type="submit">Entrar no sistema</button>
+          {error && (
+            <div
+              style={{
+                padding: "10px 12px",
+                borderRadius: "8px",
+                background: "#fff1f2",
+                color: "#be123c",
+                fontSize: "14px",
+                fontWeight: 500,
+              }}
+            >
+              {error}
+            </div>
+          )}
 
-          <div className="demo-note">
-            <strong>Acesso inicial / demonstração</strong>
-            <span>admin@postogestao.com &nbsp;•&nbsp; 123456</span>
-          </div>
+          <button className="primary-button" type="submit" disabled={loading}>
+            {loading ? "Entrando..." : "Entrar no sistema"}
+          </button>
         </form>
       </section>
     </div>
